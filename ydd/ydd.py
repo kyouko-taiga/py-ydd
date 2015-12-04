@@ -60,9 +60,6 @@ class YDD(object):
 
 class Terminal(YDD):
 
-    def enum(self):
-        return [set()]
-
     def pprint(self, indent=2, level=1):
         return self.key + '\n'
 
@@ -73,11 +70,23 @@ class Terminal(YDD):
         return self.key
 
 
+class OneTerminal(Terminal):
+
+    def enum(self):
+        return [set()]
+
+
+class ZeroTerminal(Terminal):
+
+    def enum(self):
+        return []
+
+
 class Engine(object):
 
     def __init__(self, use_weak_table=False):
-        self.one = Terminal(key='$1', creator=self)
-        self.zero = Terminal(key='$0', creator=self)
+        self.one = OneTerminal(key='$1', creator=self)
+        self.zero = ZeroTerminal(key='$0', creator=self)
 
         self._table = {
             hash(self.one): self.one,
