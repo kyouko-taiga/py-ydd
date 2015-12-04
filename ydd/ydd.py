@@ -23,6 +23,9 @@ class YDD(object):
     def __and__(self, other):
         return self.creator.intersection(self, other)
 
+    def __sub__(self, other):
+        return self.creator.difference(self, other)
+
     def enum(self):
         if self.then_ is self.creator.zero:
             then_rv = set()
@@ -166,8 +169,8 @@ class Engine(object):
         if right.key > left.key:
             # If the right operand starts with a greater key, it implies that
             # it doesn't have an accepting path where the left's starting key
-            # appears. As a result, we should continue the union only on the
-            # "else" child of the left operand.
+            # appears. As a result, we should continue only on the "else"
+            # child of the left operand.
             return self._make_node(
                 key=left.key,
                 then_=left.then_,
@@ -176,7 +179,7 @@ class Engine(object):
 
         if right.key == left.key:
             # If the left operand start with the same key as the right one,
-            # then we should continue the union on the both their children.
+            # then we should continue on the both their children.
             return self._make_node(
                 key=left.key,
                 then_=self.union(left.then_, right.then_),
@@ -188,7 +191,7 @@ class Engine(object):
             # it doesn't have an accepting path where the right's starting key
             # appears. As a result, we should return a new node that puts the
             # the "then" child of the right operand on its own "then" child,
-            # and continue the union on its "else" child.
+            # and continue on its "else" child.
             return self._make_node(
                 key=right.key,
                 then_=right.then_,
@@ -201,19 +204,19 @@ class Engine(object):
             # we can discard all the paths from the other operand.
             return self.zero
 
-        if (right is self.one):
+        if right is self.one:
             # If the right operand is the one terminal, then we can discard
-            # all paths from the left one, except its "else-most" as it
-            # corresponds to the absence of all remaining keys.
+            # all paths from the left one, except its "else-most" terminal,
+            # as it corresponds to the absence of all remaining keys.
             node = left
             while node not in (self.one, self.zero):
                 node = node.else_
             return node
 
-        if (left is self.one):
+        if left is self.one:
             # If the left operand is the one terminal, then we can discard
-            # all paths from the right one, except its "else-most" as it
-            # corresponds to the absence of all remaining keys.
+            # all paths from the right one, except its "else-most" terminal,
+            # as it corresponds to the absence of all remaining keys.
             node = right
             while node not in (self.one, self.zero):
                 node = node.else_
@@ -223,12 +226,12 @@ class Engine(object):
             # If the right operand starts with a greater key, it implies that
             # it doesn't have an accepting path where the left's starting key
             # appears. As a result, we can discard the "then" child of the
-            # left operand and continue the intersection on its "else" child.
+            # left operand and continue on its "else" child.
             return self.intersection(left.else_, right)
 
         if right.key == left.key:
             # If the left operand start with the same key as the right one,
-            # then we should continue the union on the both their children.
+            # then we should continue on the both their children.
             return self._make_node(
                 key=left.key,
                 then_=self.intersection(left.then_, right.then_),
@@ -239,8 +242,59 @@ class Engine(object):
             # If the left operand starts with a greater key, it implies that
             # it doesn't have an accepting path where the right's starting key
             # appears. As a result, we can discard the "then" child of the
-            # right operand and continue the intersection on its "else" child.
+            # right operand and continue on its "else" child.
             return self.intersection(left, right.else_)
+
+    def difference(self, left, right):
+        if right is self.zero:
+            # If the right operand is the zero terminal, then we simply return
+            # the left operand unchanged.
+            return left
+
+        if right is self.one:
+            # If the right operand is the one terminal, then we can keep all
+            # paths from the left one, except its "else-most" terminal that
+            # should be zero in order to exclude the right operand.
+            return self._update_else_most_terminal(left, self.zero)
+
+        if left is self.zero:
+            # If the left operand is the zero terminal, we simply return it.
+            return left
+
+        if left is self.one:
+            # If the left operand is the one terminal, then we return it as-is
+            # only if the "else-most" terminal of the right operand is zero.
+            node = right
+            while node not in (self.one, self.zero):
+                node = node.else_
+            return self.one if node is self.zero else self.zero
+
+        if right.key > left.key:
+            # If the right operand starts with a greater key, it implies that
+            # it doesn't have an accepting path where the left's starting key
+            # appears. As a result, we can continue only on the "else" child
+            # of the left operand only.
+            return self._make_node(
+                key=left.key,
+                then_=left.then_,
+                else_=self.difference(left.else_, right)
+            )
+
+        if right.key == left.key:
+            # If the left operand start with the same key as the right one,
+            # then we should continue on the both their children.
+            return self._make_node(
+                key=left.key,
+                then_=self.difference(left.then_, right.then_),
+                else_=self.difference(left.else_, right.else_)
+            )
+
+        if right.key < left.key:
+            # If the left operand starts with a greater key, it implies that
+            # it doesn't have an accepting path where the right's starting key
+            # appears. As a result, we don't care about any path on the "then"
+            # child of the right operand and can continue on its "else" child.
+            return self.difference(left, right.else_)
 
     def _update_else_most_terminal(self, ydd, child):
         if ydd in (self.one, self.zero):
