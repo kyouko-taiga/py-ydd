@@ -44,31 +44,66 @@ class TestYDD(unittest.TestCase):
         eue = self.engine.make_one([]) | self.engine.make_one([])
         self.assertEqual(eue.enum(), [set()])
 
-        # Test the union of equivalent families.
-        aua = self.engine.make_one({1, 3, 8}) | self.engine.make_one({1, 3, 8})
-        self.assertEqual(aua.enum(), [{1, 3, 8}])
-
         # Test the union of identical DDs.
         dd = self.engine.make_one({1, 3, 8})
         self.assertEqual(dd | dd, dd)
 
         families = [
-            # Test the union of overlapping families.
+            # Test the union of families with overlapping elements.
             ({1, 3, 9}, {1, 3, 8}),
             ({1, 3, 8}, {1, 3, 9}),
-            # Test the union of disjoint families.
+            # Test the union of families with disjoint elements.
             ({1, 3, 9}, {0, 2, 4}),
             ({0, 2, 4}, {1, 3, 9})
         ]
 
-        for sa, sb in families:
-            a = self.engine.make_one(sa)
-            b = self.engine.make_one(sb)
+        for fa, fb in families:
+            a = self.engine.make_one(fa)
+            b = self.engine.make_one(fb)
             aub = a | b
             bua = b | a
 
             self.assertEqual(
                 set(frozenset(el) for el in aub.enum()),
-                set(frozenset(el) for el in (sa, sb))
+                set(frozenset(el) for el in (fa, fb))
             )
             self.assertEqual(aub, bua)
+
+    def test_intersection(self):
+        # Test the intersection of empty families.
+        eie = self.engine.make_one([]) & self.engine.make_one([])
+        self.assertEqual(eie.enum(), [set()])
+
+        # Test the intersection of identical DDs.
+        dd = self.engine.make({1, 3, 8}, {0, 2, 4})
+        self.assertEqual(dd & dd, dd)
+
+        # Test the intersection of overlapping families.
+        families = [
+            ([{1, 3, 9}, {0, 2, 4}], [{1, 3, 9}, {5, 6, 7}]),
+            ([{1, 3, 9}, {5, 6, 7}], [{1, 3, 9}, {0, 2, 4}])
+        ]
+        
+        for fa, fb in families:
+            a = self.engine.make(*fa)
+            b = self.engine.make(*fb)
+            aib = a & b
+            bia = b & a
+
+            self.assertEqual(aib.enum(), [{1,3,9}])
+            self.assertEqual(aib, bia)
+
+        # Test the intersection of disjoint families.
+        families = [
+            ([{1, 3, 9}, {0, 2, 4}], [{1, 3, 0}, {5, 6, 7}]),
+            ([{1, 3, 0}, {5, 6, 7}], [{1, 3, 9}, {0, 2, 4}])
+        ]
+
+        for fa, fb in families:
+            a = self.engine.make(*fa)
+            b = self.engine.make(*fb)
+            aib = a & b
+            bia = b & a
+
+            self.assertEqual(aib.enum(), [])
+            self.assertEqual(aib, bia)
