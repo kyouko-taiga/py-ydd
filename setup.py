@@ -1,0 +1,31 @@
+#!/usr/bin/env python
+
+# Copyright (c) 2015, Dimitri Racordon.
+# Licensed under the Apache License, Version 2.0.
+
+import os
+from setuptools import setup, find_packages
+from codecs import open
+
+# Utility function to read the README file.
+def read(fname):
+    return open(os.path.join(os.path.dirname(__file__), fname), 'r', encoding='utf-8').read()
+
+setup(
+    name = "py-ydd",
+    version = "0.1.0",
+    author = "Dimitri Racordon",
+    author_email = "dimitri.racordon@unige.ch",
+    description = ("A library to use YaDDs with Python."),
+    license = "Apache 2.0",
+    keywords = "ydd, yadd",
+    url = "https://github.com/kyouko-taiga/py-ydd",
+    packages = find_packages(),
+    long_description = read('README.md'),
+    classifiers = [
+        "Development Status :: 3 - Alpha",
+        "Topic :: Software Development :: Libraries",
+        "License :: OSI Approved :: Apache Software License",
+    ],
+    extras_require = {}
+)
