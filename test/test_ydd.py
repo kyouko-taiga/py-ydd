@@ -90,7 +90,7 @@ class TestYDD(unittest.TestCase):
             aib = a & b
             bia = b & a
 
-            self.assertEqual(aib.enum(), [{1,3,9}])
+            self.assertEqual(aib.enum(), [{1, 3, 9}])
             self.assertEqual(aib, bia)
 
         # Test the intersection of disjoint families.
