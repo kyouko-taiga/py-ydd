@@ -129,3 +129,28 @@ class TestYDD(unittest.TestCase):
             set(frozenset(el) for el in (a - b).enum()),
             set([frozenset({1, 3, 9}), frozenset({0, 2, 4})])
         )
+
+    def test_symmetric_difference(self):
+        # Test the symmetric difference between 2 empty families.
+        ede = self.engine.make_one([]) ^ self.engine.make_one([])
+        self.assertEqual(ede.enum(), [])
+
+        # Test the symmetric difference between identical DDs.
+        dd = self.engine.make({1, 3, 8}, {0, 2, 4})
+        self.assertEqual((dd ^ dd).enum(), [])
+
+        # Test the difference between overlapping families.
+        a = self.engine.make({1, 3, 9}, {0, 2, 4})
+        b = self.engine.make({1, 3, 9}, {5, 6, 7})
+        self.assertEqual(
+            set(frozenset(el) for el in (a ^ b).enum()),
+            set([frozenset({0, 2, 4}), frozenset({5, 6, 7})])
+        )
+
+        # Test the difference between disjoint families.
+        a = self.engine.make({1, 3, 9}, {0, 2, 4})
+        b = self.engine.make({1, 3, 0}, {5, 6, 7})
+        self.assertEqual(
+            set(frozenset(el) for el in (a ^ b).enum()),
+            set(frozenset(el) for el in [{1, 3, 9}, {0, 2, 4}, {1, 3, 0}, {5, 6, 7}])
+        )
