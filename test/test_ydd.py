@@ -83,7 +83,7 @@ class TestYDD(unittest.TestCase):
             ([{1, 3, 9}, {0, 2, 4}], [{1, 3, 9}, {5, 6, 7}]),
             ([{1, 3, 9}, {5, 6, 7}], [{1, 3, 9}, {0, 2, 4}])
         ]
-        
+
         for fa, fb in families:
             a = self.engine.make(*fa)
             b = self.engine.make(*fb)
@@ -107,3 +107,25 @@ class TestYDD(unittest.TestCase):
 
             self.assertEqual(aib.enum(), [])
             self.assertEqual(aib, bia)
+
+    def test_difference(self):
+        # Test the difference between 2 empty families.
+        ede = self.engine.make_one([]) - self.engine.make_one([])
+        self.assertEqual(ede.enum(), [])
+
+        # Test the difference between identical DDs.
+        dd = self.engine.make({1, 3, 8}, {0, 2, 4})
+        self.assertEqual((dd - dd).enum(), [])
+
+        # Test the difference between overlapping families.
+        a = self.engine.make({1, 3, 9}, {0, 2, 4})
+        b = self.engine.make({1, 3, 9}, {5, 6, 7})
+        self.assertEqual((a - b).enum(), [{0, 2, 4}])
+
+        # Test the difference between disjoint families.
+        a = self.engine.make({1, 3, 9}, {0, 2, 4})
+        b = self.engine.make({1, 3, 0}, {5, 6, 7})
+        self.assertEqual(
+            set(frozenset(el) for el in (a - b).enum()),
+            set([frozenset({1, 3, 9}), frozenset({0, 2, 4})])
+        )
