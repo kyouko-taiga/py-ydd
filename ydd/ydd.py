@@ -17,6 +17,26 @@ class YDD(object):
 
         self.creator = creator
 
+    def __contains__(self, item):
+        elements = sorted(item, reverse=True)
+
+        # Try to find a path that ends on the one terminal for which there's
+        # a node for every element of the given item whose "then" child is not
+        # the zero terminal.
+        node = self
+        while (node not in (self.creator.one, self.creator.zero)) and elements:
+            el = elements[-1]
+            if el > node.key:
+                node = node.else_
+            elif el == node.key:
+                node = node.then_
+                elements.pop()
+            else:
+                node = node.else_
+                elements.pop()
+
+        return (not bool(elements)) or (node is self.creator.zero)
+
     def __or__(self, other):
         return self.creator.union(self, other)
 
@@ -83,6 +103,9 @@ class OneTerminal(Terminal):
 
 
 class ZeroTerminal(Terminal):
+
+    def __contains__(self, el):
+        return False
 
     def enum(self):
         return []

@@ -40,7 +40,7 @@ class TestYDD(unittest.TestCase):
         self.assertEqual(id(a), id(b))
 
     def test_union(self):
-        # Test the union of empty families.
+        # Test the union of families of empty set.
         eue = self.engine.make_one([]) | self.engine.make_one([])
         self.assertEqual(eue.enum(), [set()])
 
@@ -70,7 +70,7 @@ class TestYDD(unittest.TestCase):
             self.assertEqual(aub, bua)
 
     def test_intersection(self):
-        # Test the intersection of empty families.
+        # Test the intersection of families of empty set.
         eie = self.engine.make_one([]) & self.engine.make_one([])
         self.assertEqual(eie.enum(), [set()])
 
@@ -109,7 +109,7 @@ class TestYDD(unittest.TestCase):
             self.assertEqual(aib, bia)
 
     def test_difference(self):
-        # Test the difference between 2 empty families.
+        # Test the difference between 2 families of empty set.
         ede = self.engine.make_one([]) - self.engine.make_one([])
         self.assertEqual(ede.enum(), [])
 
@@ -131,7 +131,7 @@ class TestYDD(unittest.TestCase):
         )
 
     def test_symmetric_difference(self):
-        # Test the symmetric difference between 2 empty families.
+        # Test the symmetric difference between 2 families of empty set.
         ede = self.engine.make_one([]) ^ self.engine.make_one([])
         self.assertEqual(ede.enum(), [])
 
