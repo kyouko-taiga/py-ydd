@@ -26,6 +26,9 @@ class YDD(object):
     def __sub__(self, other):
         return self.creator.difference(self, other)
 
+    def __xor__(self, other):
+        return self.creator.symmetric_difference(self, other)
+
     def enum(self):
         if self.then_ is self.creator.zero:
             then_rv = set()
@@ -254,7 +257,7 @@ class Engine(object):
         if right is self.one:
             # If the right operand is the one terminal, then we can keep all
             # paths from the left one, except its "else-most" terminal that
-            # should be zero in order to exclude the right operand.
+            # should be zero, in order to exclude the right operand.
             return self._update_else_most_terminal(left, self.zero)
 
         if left is self.zero:
@@ -294,6 +297,63 @@ class Engine(object):
             # it doesn't have an accepting path where the right's starting key
             # appears. As a result, we don't care about any path on the "then"
             # child of the right operand and can continue on its "else" child.
+            return self.difference(left, right.else_)
+
+    def symmetric_difference(self, left, right):
+        if right is self.zero:
+            # If the right operand is the zero terminal, then we simply return
+            # the left operand unchanged.
+            return left
+
+        if right is self.one:
+            # If the right operand is the one terminal, then we can keep all
+            # paths from the left one, except its "else-most" terminal that
+            # should be zero, in order to exclude the right operand.
+            return self._update_else_most_terminal(left, self.zero)
+
+        if left is self.zero:
+            # If the left operand is the zero terminal, then we simply return
+            # the right operand unchanged.
+            return right
+
+        if left is self.one:
+            # If the left operand is the one terminal, then we return it as-is
+            # only if the "else-most" terminal of the right operand is zero.
+            node = right
+            while node not in (self.one, self.zero):
+                node = node.else_
+            return self.one if node is self.zero else self.zero
+
+        if right.key > left.key:
+            # If the right operand starts with a greater key, it implies that
+            # it doesn't have an accepting path where the left's starting key
+            # appears. As a result, we can continue only on the "else" child
+            # of the left operand only.
+            return self._make_node(
+                key=left.key,
+                then_=left.then_,
+                else_=self.symmetric_difference(left.else_, right)
+            )
+
+        if right.key == left.key:
+            # If the left operand start with the same key as the right one,
+            # then we should continue on the both their children.
+            return self._make_node(
+                key=left.key,
+                then_=self.symmetric_difference(left.then_, right.then_),
+                else_=self.symmetric_difference(left.else_, right.else_)
+            )
+
+        if right.key < left.key:
+            # If the left operand starts with a greater key, it implies that
+            # it doesn't have an accepting path where the right's starting key
+            # appears. As a result, we can keep then "then" child of the right
+            # operand unchanged, and continue on its "else" child.
+            return self._make_node(
+                key=right.key,
+                then_=right.then_,
+                else_=self.difference(left, right.else_)
+            )
             return self.difference(left, right.else_)
 
     def _update_else_most_terminal(self, ydd, child):
