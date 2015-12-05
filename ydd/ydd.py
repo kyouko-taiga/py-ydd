@@ -35,7 +35,7 @@ class YDD(object):
                 node = node.else_
                 elements.pop()
 
-        return (not bool(elements)) or (node is self.creator.zero)
+        return (not bool(elements)) and (node is self.creator.one)
 
     def __or__(self, other):
         return self.creator.union(self, other)
