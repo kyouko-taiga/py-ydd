@@ -14,7 +14,6 @@ class TestYDD(unittest.TestCase):
     def test_empty_family(self):
         self.assertEqual(self.engine.make_one(set()), self.engine.one)
         self.assertEqual(self.engine.make_one(list()), self.engine.one)
-        self.assertEqual(self.engine.make_one(tuple()), self.engine.one)
 
     def test_make_one(self):
         self.assertEqual(self.engine.make_one({-1, 1}).enum(), [{-1, 1}])
@@ -38,6 +37,28 @@ class TestYDD(unittest.TestCase):
         a = self.engine.make_one([-2, 0, 2])
         b = self.engine.make_one([2, -2, 0])
         self.assertEqual(id(a), id(b))
+
+    def test_contains(self):
+        dd = self.engine.one
+        self.assertTrue(set() in dd)
+        self.assertTrue(list() in dd)
+
+        dd = self.engine.zero
+        self.assertFalse(set() in dd)
+        self.assertFalse(list() in dd)
+
+        dd = self.engine.make({1})
+        self.assertTrue({1} in dd)
+        self.assertFalse({2} in dd)
+
+        dd = self.engine.make({1, 2}, {1, 3}, {4, 5})
+        self.assertTrue({1, 2} in dd)
+        self.assertTrue({1, 3} in dd)
+        self.assertTrue({4, 5} in dd)
+
+        self.assertFalse(set() in dd)
+        self.assertFalse({1} in dd)
+        self.assertFalse({1, 5} in dd)
 
     def test_union(self):
         # Test the union of families of empty set.
