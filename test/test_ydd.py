@@ -79,6 +79,64 @@ class TestYDD(unittest.TestCase):
             set(frozenset(el) for el in ([4], [4, 5], [4, 6, 9]))
         )
 
+    def test_lt(self):
+        # Test the inclusion of the familiy of empty set.
+        dd = self.engine.one
+        self.assertFalse(dd < self.engine.one)
+        self.assertFalse(dd < self.engine.zero)
+        self.assertFalse(dd < self.engine.make([1, 2]))
+        self.assertFalse(dd < self.engine.make([4], [4, 5], [4, 6, 9]))
+
+        # Test the inclusion of the empty family.
+        dd = self.engine.zero
+        self.assertTrue(dd < self.engine.one)
+        self.assertFalse(dd < self.engine.zero)
+        self.assertTrue(dd < self.engine.make([1, 2]))
+        self.assertTrue(dd < self.engine.make([4], [4, 5], [4, 6, 9]))
+
+        # Test the inclusion of a family of a singleton.
+        dd = self.engine.make([4, 5])
+        self.assertFalse(dd < self.engine.one)
+        self.assertFalse(dd < self.engine.zero)
+        self.assertFalse(dd < self.engine.make([4, 5]))
+        self.assertTrue(dd < self.engine.make([4], [4, 5], [4, 6, 9]))
+
+        # Test the inclusion of an arbitrary family.
+        dd = self.engine.make([4, 5], [4, 6, 9])
+        self.assertFalse(dd < self.engine.one)
+        self.assertFalse(dd < self.engine.zero)
+        self.assertFalse(dd < self.engine.make([4, 5], [4, 6, 9]))
+        self.assertTrue(dd < self.engine.make([4], [4, 5], [4, 6, 9]))
+
+    def test_le(self):
+        # Test the inclusion of the familiy of empty set.
+        dd = self.engine.one
+        self.assertTrue(dd <= self.engine.one)
+        self.assertFalse(dd <= self.engine.zero)
+        self.assertFalse(dd <= self.engine.make([1, 2]))
+        self.assertFalse(dd <= self.engine.make([4], [4, 5], [4, 6, 9]))
+
+        # Test the inclusion of the empty family.
+        dd = self.engine.zero
+        self.assertTrue(dd <= self.engine.one)
+        self.assertTrue(dd <= self.engine.zero)
+        self.assertTrue(dd <= self.engine.make([1, 2]))
+        self.assertTrue(dd <= self.engine.make([4], [4, 5], [4, 6, 9]))
+
+        # Test the inclusion of a family of a singleton.
+        dd = self.engine.make([4, 5])
+        self.assertFalse(dd <= self.engine.one)
+        self.assertFalse(dd <= self.engine.zero)
+        self.assertTrue(dd <= self.engine.make([4, 5]))
+        self.assertTrue(dd <= self.engine.make([4], [4, 5], [4, 6, 9]))
+
+        # Test the inclusion of an arbitrary family.
+        dd = self.engine.make([4, 5], [4, 6, 9])
+        self.assertFalse(dd <= self.engine.one)
+        self.assertFalse(dd <= self.engine.zero)
+        self.assertTrue(dd <= self.engine.make([4, 5], [4, 6, 9]))
+        self.assertTrue(dd <= self.engine.make([4], [4, 5], [4, 6, 9]))
+
     def test_union(self):
         # Test the union of families of empty set.
         eue = self.engine.make_one([]) | self.engine.make_one([])
