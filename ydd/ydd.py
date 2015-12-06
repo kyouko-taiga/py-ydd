@@ -112,6 +112,9 @@ class YDD(object):
     def __xor__(self, other):
         return self.creator.symmetric_difference(self, other)
 
+    def isdisjoint(self, other):
+        return (self & other) is self.creator.zero
+
     def pprint(self, indent=4, level=1):
         indentation = (' ' * indent * level)
 
