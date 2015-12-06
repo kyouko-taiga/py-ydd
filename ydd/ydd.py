@@ -18,12 +18,14 @@ class YDD(object):
         self.creator = creator
 
     def __contains__(self, item):
-        elements = sorted(item, reverse=True)
 
-        # Try to find a path that ends on the one terminal for which there's
-        # a node for every element of the given item whose "then" child is not
-        # the zero terminal.
+        # Implementation note: We try to find a path that ends on the one
+        # terminal for which there's a node for every element of the given
+        # item whose "then" child is not the zero terminal.
+
+        elements = sorted(item, reverse=True)
         node = self
+
         while (node not in (self.creator.one, self.creator.zero)) and elements:
             el = elements[-1]
             if el > node.key:
@@ -63,6 +65,37 @@ class YDD(object):
             else:
                 rv.append(node.key)
                 node = node.then_
+
+    def __lt__(self, other):
+        if other in (self.creator.one, self.creator.zero):
+            # We can assume that self is not a terminal node, since __lt__ is
+            # overridden in the terminal classes. Thus it has a "then" and
+            # child, implying it can't be contained within a terminal.
+            return False
+
+        if other.key > self.key:
+            return False
+        if other.key == self.key:
+            return (
+                (self is not other) and
+                ((self.then_ <= other.then_) and (self.else_ <= other.else_))
+            )
+        if other.key < self.key:
+            return self < other.else_
+
+    def __le__(self, other):
+        if other in (self.creator.one, self.creator.zero):
+            # We can assume that self is not a terminal node, since __le__ is
+            # overridden in the terminal classes. Thus it has a "then" and
+            # child, implying it can't be contained within a terminal.
+            return False
+
+        if other.key > self.key:
+            return False
+        if other.key == self.key:
+            return (self is other) or ((self.then_ <= other.then_) and (self.else_ <= other.else_))
+        if other.key < self.key:
+            return self <= other.else_
 
     def __or__(self, other):
         return self.creator.union(self, other)
@@ -112,13 +145,27 @@ class Terminal(YDD):
 
 class OneTerminal(Terminal):
 
-    pass
+    def __lt__(self, other):
+        if other in (self, self.creator.zero):
+            return False
+        return self < other.else_
+
+    def __le__(self, other):
+        if other in (self, self.creator.zero):
+            return self is other
+        return self <= other.else_
 
 
 class ZeroTerminal(Terminal):
 
     def __contains__(self, el):
         return False
+
+    def __lt__(self, other):
+        return self is not other
+
+    def __le__(self, other):
+        return True
 
 
 class Engine(object):
