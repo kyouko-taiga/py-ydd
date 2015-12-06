@@ -76,19 +76,6 @@ class YDD(object):
     def __xor__(self, other):
         return self.creator.symmetric_difference(self, other)
 
-    def enum(self):
-        if self.then_ is self.creator.zero:
-            then_rv = set()
-        else:
-            then_rv = [set((self.key,)) | tail for tail in self.then_.enum()]
-
-        if self.else_ is self.creator.zero:
-            else_rv = []
-        else:
-            else_rv = self.else_.enum()
-
-        return then_rv + else_rv
-
     def pprint(self, indent=4, level=1):
         indentation = (' ' * indent * level)
 
@@ -125,17 +112,13 @@ class Terminal(YDD):
 
 class OneTerminal(Terminal):
 
-    def enum(self):
-        return [set()]
+    pass
 
 
 class ZeroTerminal(Terminal):
 
     def __contains__(self, el):
         return False
-
-    def enum(self):
-        return []
 
 
 class Engine(object):

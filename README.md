@@ -23,24 +23,24 @@ Now you're ready to create your families of sets:
 
 ```
 family = engine.make({1, 2, 3}, {1, 2})
-print(family.enum())
->>> [{1, 2, 3}, {1, 2}]
+print(list(family))
+>>> [frozenset({1, 2}), frozenset({1, 2, 3})]
 ```
 
 And to perform any kind of operations on them:
 
 ```
 family = family | engine.make({4 ,5})
-print(family.enum())
->>> [{1, 2, 3}, {1, 2}, {4, 5}]
+print(list(family))
+>>> [frozenset({4, 5}), frozenset({1, 2}), frozenset({1, 2, 3})]
 
 family = family & engine.make({4, 5}, {1, 2, 3}, {6, 7})
-print(family.enum())
->>> [{1, 2, 3}, {4, 5}]
+print(list(family))
+>>> [frozenset({4, 5}), frozenset({1, 2, 3})]
 
 family = family - engine.make({1, 2, 3})
-print(family.enum())
->>> [{4, 5}]
+print(list(family))
+>>> [frozenset({4, 5})]
 ```
 
 ## Tests
