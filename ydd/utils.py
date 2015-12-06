@@ -18,4 +18,4 @@ def hash_key(key):
 
 
 def hash_node(key, then_, else_):
-    return hash_key(key) ^ id(then_) ^ id(else_)
+    return hash((hash_key(key), id(then_), id(else_)))
