@@ -1,6 +1,7 @@
 # Copyright (c) 2015, Dimitri Racordon.
 # Licensed under the Apache License, Version 2.0.
 
+from collections.abc import Set, Hashable
 from functools import reduce
 from operator import or_
 from weakref import WeakValueDictionary
@@ -8,7 +9,7 @@ from weakref import WeakValueDictionary
 from ydd.utils import hash_node
 
 
-class YDD(object):
+class YDD(Set, Hashable):
 
     def __init__(self, key=None, then_=None, else_=None, creator=None):
         self.key = key
@@ -100,6 +101,15 @@ class YDD(object):
         if other.key < self.key:
             return self <= other.else_
 
+    def __eq__(self, other):
+        return self is other
+
+    def __ge__(self, other):
+        return not (other < self)
+
+    def __gt__(self, other):
+        return not (other < self)
+
     def __or__(self, other):
         return self.creator.union(self, other)
 
@@ -126,6 +136,10 @@ class YDD(object):
         if (level == 1):
             rv = rv.strip('\n')
         return rv
+
+    def _hash(self):
+        # See the notes on hashability using collections.abc.Set.
+        return hash(self)
 
     def __hash__(self):
         return hash_node(self.key, self.then_, self.else_)
@@ -164,6 +178,12 @@ class OneTerminal(Terminal):
             return self is other
         return self <= other.else_
 
+    def __ge__(self, other):
+        return self is other
+
+    def __gt__(self, other):
+        return other is self.creator.zero
+
 
 class ZeroTerminal(Terminal):
 
@@ -178,6 +198,12 @@ class ZeroTerminal(Terminal):
 
     def __le__(self, other):
         return True
+
+    def __ge__(self, other):
+        return self is other
+
+    def __gt__(self, other):
+        return False
 
 
 class Engine(object):
