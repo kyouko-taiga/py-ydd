@@ -43,5 +43,7 @@ print(list(family))
 >>> [frozenset({4, 5})]
 ```
 
+Families of sets behave like Python's built-in sets, as they implement the [Set](https://docs.python.org/3/library/collections.abc.html#collections.abc.Set) interface.
+
 ## Tests
 To run the tests, type `python -m unittest discover`.
