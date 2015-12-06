@@ -79,6 +79,12 @@ class TestYDD(unittest.TestCase):
             set(frozenset(el) for el in ([4], [4, 5], [4, 6, 9]))
         )
 
+    def test_len(self):
+        self.assertEqual(len(self.engine.one), 1)
+        self.assertEqual(len(self.engine.zero), 0)
+        self.assertEqual(len(self.engine.make([1, 2])), 1)
+        self.assertEqual(len(self.engine.make([4], [4, 5], [4, 6, 9])), 3)
+
     def test_lt(self):
         # Test the inclusion of the familiy of empty set.
         dd = self.engine.one
