@@ -60,6 +60,25 @@ class TestYDD(unittest.TestCase):
         self.assertFalse({1} in dd)
         self.assertFalse({1, 5} in dd)
 
+    def test_iter(self):
+        dd = self.engine.one
+        self.assertEqual(list(dd), [set()])
+
+        dd = self.engine.zero
+        self.assertEqual(list(dd), [])
+
+        dd = self.engine.make([1])
+        self.assertEqual(list(dd), [{1}])
+
+        dd = self.engine.make([1, 2])
+        self.assertEqual(list(dd), [{1, 2}])
+
+        dd = self.engine.make([4], [4, 5], [4, 6, 9])
+        self.assertEqual(
+            set(frozenset(el) for el in dd),
+            set(frozenset(el) for el in ([4], [4, 5], [4, 6, 9]))
+        )
+
     def test_union(self):
         # Test the union of families of empty set.
         eue = self.engine.make_one([]) | self.engine.make_one([])
