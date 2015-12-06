@@ -66,6 +66,9 @@ class YDD(object):
                 rv.append(node.key)
                 node = node.then_
 
+    def __len__(self):
+        return len(self.else_) + len(self.then_)
+
     def __lt__(self, other):
         if other in (self.creator.one, self.creator.zero):
             # We can assume that self is not a terminal node, since __lt__ is
@@ -145,6 +148,9 @@ class Terminal(YDD):
 
 class OneTerminal(Terminal):
 
+    def __len__(self):
+        return 1
+
     def __lt__(self, other):
         if other in (self, self.creator.zero):
             return False
@@ -160,6 +166,9 @@ class ZeroTerminal(Terminal):
 
     def __contains__(self, el):
         return False
+
+    def __len__(self):
+        return 0
 
     def __lt__(self, other):
         return self is not other
