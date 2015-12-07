@@ -145,7 +145,7 @@ class YDD(Set, Hashable):
         return hash_node(self.key, self.then_, self.else_)
 
     def __str__(self):
-        return str(self.enum())
+        return str(list(self))
 
     def __repr__(self):
         return '%r -> (then: %r, else: %r)' % (self.key, self.then_, self.else_)
