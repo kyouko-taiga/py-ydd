@@ -2,7 +2,7 @@
 # Licensed under the Apache License, Version 2.0.
 
 from collections.abc import Set, Hashable
-from functools import reduce
+from functools import reduce, wraps
 from operator import or_
 from weakref import WeakValueDictionary
 
@@ -220,7 +220,18 @@ class Engine(object):
         if use_weak_table:
             self._table = WeakValueDictionary(self._table)
 
-        self._memoization = {}
+        self._cache = {}
+
+    def cached(fn):
+        @wraps(fn)
+        def decorated(self, *args):
+            cache_key = hash(tuple([fn.__name__] + list(args)))
+            try:
+                return self._cache[cache_key]
+            except KeyError:
+                self._cache[cache_key] = fn(self, *args)
+            return self._cache[cache_key]
+        return decorated
 
     def make(self, *iterables):
         # If there aren't any iterables, return a DD encoding the empty set.
@@ -266,6 +277,7 @@ class Engine(object):
             self._table[h] = rv
             return rv
 
+    @cached
     def union(self, left, right):
         if right is self.one:
             # If the right operand is the one terminal, then we return the
@@ -319,6 +331,7 @@ class Engine(object):
                 else_=self.union(left, right.else_)
             )
 
+    @cached
     def intersection(self, left, right):
         if (right is self.zero) or (left is self.zero):
             # If either the left or right operand is the zero terminal, then
@@ -366,6 +379,7 @@ class Engine(object):
             # right operand and continue on its "else" child.
             return self.intersection(left, right.else_)
 
+    @cached
     def difference(self, left, right):
         if right is self.zero:
             # If the right operand is the zero terminal, then we simply return
@@ -417,6 +431,7 @@ class Engine(object):
             # child of the right operand and can continue on its "else" child.
             return self.difference(left, right.else_)
 
+    @cached
     def symmetric_difference(self, left, right):
         if right is self.zero:
             # If the right operand is the zero terminal, then we simply return
