@@ -216,16 +216,21 @@ class Engine(object):
 
         self._cache = {}
 
-    def cached(fn):
-        @wraps(fn)
-        def decorated(self, *args):
-            cache_key = hash(tuple([fn.__name__] + list(args)))
-            try:
+    def cached(keygen=None):
+        def decorate(fn):
+            @wraps(fn)
+            def decorated(self, *args):
+                if keygen is None:
+                    cache_key = hash(tuple([fn.__name__] + list(args)))
+                else:
+                    cache_key = hash(tuple([fn.__name__] + keygen(*args)))
+                try:
+                    return self._cache[cache_key]
+                except KeyError:
+                    self._cache[cache_key] = fn(self, *args)
                 return self._cache[cache_key]
-            except KeyError:
-                self._cache[cache_key] = fn(self, *args)
-            return self._cache[cache_key]
-        return decorated
+            return decorated
+        return decorate
 
     def make(self, *iterables):
         # If there aren't any iterables, return a DD encoding the empty set.
@@ -271,7 +276,7 @@ class Engine(object):
             self._table[h] = rv
             return rv
 
-    @cached
+    @cached(keygen=lambda l, r: [l, r] if (id(l) < id(r)) else [r, l])
     def union(self, left, right):
         if right is self.one:
             # If the right operand is the one terminal, then we return the
@@ -325,7 +330,7 @@ class Engine(object):
                 else_=self.union(left, right.else_)
             )
 
-    @cached
+    @cached(keygen=lambda l, r: [l, r] if (id(l) < id(r)) else [r, l])
     def intersection(self, left, right):
         if (right is self.zero) or (left is self.zero):
             # If either the left or right operand is the zero terminal, then
@@ -373,7 +378,7 @@ class Engine(object):
             # right operand and continue on its "else" child.
             return self.intersection(left, right.else_)
 
-    @cached
+    @cached(keygen=lambda l, r: [l, r] if (id(l) < id(r)) else [r, l])
     def difference(self, left, right):
         if right is self.zero:
             # If the right operand is the zero terminal, then we simply return
@@ -425,7 +430,7 @@ class Engine(object):
             # child of the right operand and can continue on its "else" child.
             return self.difference(left, right.else_)
 
-    @cached
+    @cached(keygen=lambda l, r: [l, r] if (id(l) < id(r)) else [r, l])
     def symmetric_difference(self, left, right):
         if right is self.zero:
             # If the right operand is the zero terminal, then we simply return
