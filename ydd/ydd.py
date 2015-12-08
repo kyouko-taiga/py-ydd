@@ -57,7 +57,7 @@ class YDD(Set, Hashable):
                 try:
                     node = stack.pop()
                 except IndexError:
-                    raise StopIteration()
+                    return
                 rv = list(filter(lambda e: e < node.key, rv)) + [node.key]
                 node = node.then_
             elif node.else_ is not self.creator.zero:
