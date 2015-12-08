@@ -68,7 +68,7 @@ class YDD(Set, Hashable):
                 node = node.then_
 
     def __len__(self):
-        return len(self.else_) + len(self.then_)
+        return self.creator.len(self)
 
     def __lt__(self, other):
         if other in (self.creator.one, self.creator.zero):
@@ -165,9 +165,6 @@ class Terminal(YDD):
 
 class OneTerminal(Terminal):
 
-    def __len__(self):
-        return 1
-
     def __lt__(self, other):
         if other in (self, self.creator.zero):
             return False
@@ -189,9 +186,6 @@ class ZeroTerminal(Terminal):
 
     def __contains__(self, el):
         return False
-
-    def __len__(self):
-        return 0
 
     def __lt__(self, other):
         return self is not other
@@ -488,6 +482,14 @@ class Engine(object):
                 else_=self.difference(left, right.else_)
             )
             return self.difference(left, right.else_)
+
+    @cached(keygen=lambda ydd: [ydd])
+    def len(self, ydd):
+        if ydd is self.zero:
+            return 0
+        if ydd is self.one:
+            return 1
+        return self.len(ydd.else_) + self.len(ydd.then_)
 
     def _update_else_most_terminal(self, ydd, child):
         if ydd in (self.one, self.zero):
