@@ -170,17 +170,13 @@ namespace ydd {
             }
 
             bool operator== (const Node& other) const {
-                if ((this->ref_count == 0) or (other.ref_count == 0)) {
-                    return false;
-                }
-                
                 return
-                (this->terminal == other.terminal)
-                and (this->key == other.key)
-                and (this->then_ == other.then_)
-                // and (this->then_key == other.then_key)
-                and (this->else_ == other.else_);
-                // and (this->else_key == other.else_key);
+                    (this->terminal == other.terminal)
+                    and (this->key == other.key)
+                    and (this->then_ == other.then_)
+                    and (this->else_ == other.else_);
+                    // and (this->then_key == other.then_key)
+                    // and (this->else_key == other.else_key);
             }
 
             bool terminal;
@@ -207,7 +203,7 @@ namespace ydd {
                 // Check whether the node already exists in the table.
                 std::size_t idx = node.hash() % Config::buckets_nb;
                 for (auto i = idx; i < idx + Config::buckets_security; ++i) {
-                    if (node == this->nodes[i]) {
+                    if ((this->nodes[i].ref_count > 0) and (node == this->nodes[i])) {
                         // To change when we'll be using attributed edges.
                         return Root(*this->_engine, &this->nodes[i]);
                     }
