@@ -203,7 +203,7 @@ namespace ydd {
 
             Root operator[] (const Node& node) {
                 // Check whether the node already exists in the table.
-                std::size_t idx = node.hash() % Config::buckets_nb;
+                std::size_t idx = (node.hash() % Config::buckets_nb) * Config::buckets_security;
                 for (auto i = idx; i < idx + Config::buckets_security; ++i) {
                     if ((this->nodes[i].ref_count > 0) and (node == this->nodes[i])) {
                         // To change when we'll be using attributed edges.
