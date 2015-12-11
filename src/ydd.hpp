@@ -12,9 +12,7 @@ namespace ydd {
 
         class Node;
 
-        class Cache {
-        };
-
+    public:
         class Root {
         private:
             Engine* _engine;
@@ -140,6 +138,10 @@ namespace ydd {
             bool operator== (const Root& other) const {
                 return this->node == other.node;
             }
+        };
+
+    private:
+        class Cache {
         };
 
         class Node {
