@@ -141,7 +141,38 @@ namespace ydd {
         };
 
     private:
+        friend class Root;
+
         class Cache {
+        public:
+            struct CacheRecord {
+                CacheRecord() {}
+                CacheRecord(const Root* left, const Root* right, const Root* result)
+                : left(left), right(right), result(result) {
+                }
+
+                Root left;
+                Root right;
+                Root result;
+            };
+
+            Cache(const std::size_t size)
+            : _store(new CacheRecord[size]), _store_size(size) {
+            }
+
+            ~Cache() {
+                delete[] this->_store;
+            }
+
+            CacheRecord& operator() (const Root& left, const Root& right) {
+                std::size_t h = left.hash();
+                h ^= right.hash() + 0x9e3779b9 + (h << 6) + (h >> 2);
+                return this->_store[h % this->_store_size];
+            }
+
+        private:
+            CacheRecord* _store;
+            const std::size_t _store_size;
         };
 
         class Node {
