@@ -65,46 +65,53 @@ namespace ydd {
             Root operator+ (const Root& other) const {
                 if (this->is_zero()) {
                     return other;
+                } else if (other.is_zero()) {
+                    return *this;
                 }
 
-                if (other.is_zero()) {
-                    return *this;
+                // Try to get the result from the cache.
+                auto& cache_record = this->_engine->_union_cache(*this, other);
+                if ((cache_record.left == *this) and (cache_record.right == other)) {
+                    return cache_record.result;
+                } else {
+                    cache_record.left = *this;
+                    cache_record.right = other;
                 }
 
                 if (this->is_one()) {
                     if (other.is_one() or other.is_zero()) {
-                        return *this;
+                        cache_record.result = *this;
                     } else {
-                        return this->_engine->make_node(
+                        cache_record.result = this->_engine->make_node(
                             other.key(), other.then_(), other.else_() + *this);
                     }
                 }
 
-                if (other.is_one()) {
+                else if (other.is_one()) {
                     if (this->is_one() or this->is_zero()) {
-                        return other;
+                        cache_record.result = other;
                     } else {
-                        return this->_engine->make_node(
+                        cache_record.result = this->_engine->make_node(
                             this->key(), this->then_(), this->else_() + other);
                     }
                 }
 
-                if (other.key() > this->key()) {
-                    return this->_engine->make_node(
+                else if (other.key() > this->key()) {
+                    cache_record.result = this->_engine->make_node(
                         this->key(), this->then_(), this->else_() + other);
                 }
 
-                if (other.key() == this->key()) {
-                    return this->_engine->make_node(
+                else if (other.key() == this->key()) {
+                    cache_record.result = this->_engine->make_node(
                         this->key(), this->then_() + other.then_(), this->else_() + other.else_());
                 }
 
-                if (other.key() < this->key()) {
-                    return this->_engine->make_node(
+                else if (other.key() < this->key()) {
+                    cache_record.result = this->_engine->make_node(
                         other.key(), other.then_(), other.else_() + *this);
                 }
 
-                return *this;
+                return cache_record.result;
             }
 
             // Key key;
@@ -260,10 +267,10 @@ namespace ydd {
         };
 
         UniqueTable _unique_table;
-        Cache _cache;
+        Cache _union_cache;
 
     public:
-        Engine() {
+        Engine() : _union_cache(Config::union_cache_size) {
             this->_unique_table._engine = this;
         }
 
