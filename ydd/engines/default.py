@@ -168,7 +168,7 @@ class DefaultEngine(AbstractEngine):
         else:
             return self.zero
 
-    def make_node(self, key, then_, else_): 
+    def make_node(self, key, then_, else_):
         # Apply the ZDD-reduction rule at the node creation, so we make sure
         # to create canonical forms only.
         if then_ is self.zero:
