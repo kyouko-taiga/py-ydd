@@ -185,11 +185,11 @@ namespace ydd {
         class Node {
         public:
             Node()
-            : key(), ref_count(0), terminal(false) {
+            : ref_count(0), terminal(false), key() {
             }
 
             Node(const Key& key, const Root& then_, const Root& else_)
-            : key(key), then_(then_), else_(else_), ref_count(0), terminal(false) {
+            : ref_count(0), terminal(false), key(key), then_(then_), else_(else_) {
             }
 
             Node(bool terminal)
@@ -219,14 +219,14 @@ namespace ydd {
                     // and (this->else_key == other.else_key);
             }
 
+            mutable std::size_t ref_count;
+
             bool terminal;
+            Key key;
             Root then_;
             Root else_;
-            Key key;
             // Key then_key;
             // Key else_key;
-
-            mutable std::size_t ref_count;
         };
 
         class UniqueTable {
