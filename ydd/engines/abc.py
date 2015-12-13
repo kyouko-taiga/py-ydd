@@ -58,6 +58,12 @@ class AbstractRoot(Hashable, metaclass=ABCMeta):
                 rv.append(node.key)
                 node = node.then_
 
+    def __ge__(self, other):
+        return (other <= self)
+
+    def __gt__(self, other):
+        return (other < self)
+
     def __str__(self):
         return str([set(s) for s in self])
 
