@@ -141,6 +141,14 @@ namespace ydd {
                 return (this->node != nullptr) and (this->node->terminal == true);
             }
 
+            std::size_t size() const {
+                if (this->is_zero()) {
+                    return 0;
+                } else {
+                    return this->node->size;
+                }
+            }
+
             std::size_t hash() const {
                 std::hash<const Node*> node_hasher;
                 return node_hasher(this->node);
@@ -215,15 +223,16 @@ namespace ydd {
         class Node {
         public:
             Node()
-            : ref_count(0), terminal(false), key() {
+            : ref_count(0), size(0), terminal(false), key() {
             }
 
             Node(const Key& key, const Root& then_, const Root& else_)
-            : ref_count(0), terminal(false), key(key), then_(then_), else_(else_) {
+            : ref_count(0), size(then_.size() + else_.size()), terminal(false),
+              key(key), then_(then_), else_(else_) {
             }
 
             Node(bool terminal)
-            : ref_count(0), terminal(terminal), key() {
+            : ref_count(0), size(terminal ? 1 : 0), terminal(terminal), key() {
             }
 
             bool operator== (const Node& other) const {
@@ -250,6 +259,7 @@ namespace ydd {
             }
 
             mutable std::size_t ref_count;
+            mutable std::size_t size;
 
             bool terminal;
             Key key;

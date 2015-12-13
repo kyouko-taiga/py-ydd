@@ -40,10 +40,11 @@ BOOST_PYTHON_MODULE(cpp) {
 
         .def(self == self)
         .def(self | self)
-        .def("__hash__", &IntRoot::hash)
 
         .def("is_one", &IntRoot::is_one)
-        .def("is_zero", &IntRoot::is_zero);
+        .def("is_zero", &IntRoot::is_zero)
+        .def("__len__", &IntRoot::size)
+        .def("__hash__", &IntRoot::hash);
 
     class_<IntEngine, boost::noncopyable>("IntEngine", init<>())
         .def("make_terminal", &IntEngine::make_terminal)
