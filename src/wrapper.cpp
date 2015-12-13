@@ -17,7 +17,7 @@ struct Config {
 };
 
 
-BOOST_PYTHON_MODULE(cEngine) {
+BOOST_PYTHON_MODULE(cpp) {
     using namespace boost::python;
 
     using IntEngine = ydd::Engine<Config>;

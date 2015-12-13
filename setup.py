@@ -24,7 +24,7 @@ setup(
     packages = find_packages(),
     ext_modules=[
         Extension(
-            'cEngine',
+            'ydd.engines.cpp',
             ['src/wrapper.cpp'],
             libraries=['boost_python'],
             extra_compile_args=['-std=c++11']
