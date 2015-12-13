@@ -271,6 +271,58 @@ namespace ydd {
                 return cache_record.result;
             }
 
+            Root operator^ (const Root& other) const {
+                if (this->is_zero()) {
+                    return other;
+                } else if (other.is_zero()) {
+                    return *this;
+                }
+
+                // Try to get the result from the cache.
+                auto& cache_record = this->_engine->_symmetric_difference_cache(*this, other);
+                if ((cache_record.left == *this) and (cache_record.right == other)) {
+                    return cache_record.result;
+                } else {
+                    cache_record.left = *this;
+                    cache_record.right = other;
+                }
+
+                if (this->is_one()) {
+                    if (other.is_one()) {
+                        cache_record.result = this->_engine->make_terminal(false);
+                    } else {
+                        cache_record.result = this->_engine->make_node(
+                            other.key(), other.then_(), *this ^ other.else_());
+                    }
+                }
+
+                else if (other.is_one()) {
+                    if (this->is_one()) {
+                        cache_record.result = this->_engine->make_terminal(false);
+                    } else {
+                        cache_record.result = this->_engine->make_node(
+                            this->key(), this->then_(), this->else_() ^ other);
+                    }
+                }
+
+                else if (other.key() > this->key()) {
+                    cache_record.result = this->_engine->make_node(
+                        this->key(), this->then_(), this->else_() ^ other);
+                }
+
+                else if (other.key() == this->key()) {
+                    cache_record.result = this->_engine->make_node(
+                        this->key(), this->then_() ^ other.then_(), this->else_() ^ other.else_());
+                }
+
+                else if (other.key() < this->key()) {
+                    cache_record.result = this->_engine->make_node(
+                        other.key(), other.then_(), *this ^ other.else_());
+                }
+
+                return cache_record.result;
+            }
+
             inline const Key& key() const {
                 return this->node->key;
             }
@@ -311,7 +363,8 @@ namespace ydd {
         Engine()
         : _union_cache(Config::union_cache_size),
           _intersection_cache(Config::intersection_cache_size),
-          _difference_cache(Config::difference_cache_size) {
+          _difference_cache(Config::difference_cache_size),
+          _symmetric_difference_cache(Config::symmetric_difference_cache_size) {
             this->_unique_table._engine = this;
         }
 
@@ -463,6 +516,7 @@ namespace ydd {
         Cache _union_cache;
         Cache _intersection_cache;
         Cache _difference_cache;
+        Cache _symmetric_difference_cache;
     };
 
 }
