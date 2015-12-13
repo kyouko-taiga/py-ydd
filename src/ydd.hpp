@@ -193,7 +193,7 @@ namespace ydd {
             }
 
             Node(bool terminal)
-            : ref_count(0), terminal(terminal) {
+            : ref_count(0), terminal(terminal), key() {
             }
 
             std::size_t hash() const {
