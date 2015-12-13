@@ -9,7 +9,8 @@ import time
 from functools import reduce
 from operator import or_
 
-from ydd.ydd import Engine
+from ydd.engines.default import DefaultEngine as Engine
+# from ydd.engines.cpp import IntEngine as Engine
 
 
 def benchmark(nb_singletons=50, nb_elements=100):
@@ -18,13 +19,13 @@ def benchmark(nb_singletons=50, nb_elements=100):
     m = nb_elements
 
     engine = Engine()
-    singletons = [[int(random.random() * m) for _ in range(m)] for _ in range(n)]
+    singletons = [[random.randint(0, m // 2) for _ in range(m)] for _ in range(n)]
 
     # Benchmark tests.
     benchmark_start = time.time()
     singleton_start = time.time()
 
-    diagrams = [engine.make_one(singleton) for singleton in singletons]
+    diagrams = [engine.make_from_container(singleton) for singleton in singletons]
 
     singleton_time = time.time() - singleton_start
     union_start = time.time()

@@ -59,9 +59,43 @@ class AbstractRoot(Hashable, metaclass=ABCMeta):
     def is_one(self):
         pass
 
+    def isdisjoint(self, other):
+        return (self & other).is_zero()
+
     def _hash(self):
         # See the notes on hashability using collections.abc.Set.
         return hash(self)
+
+    def __contains__(self, item):
+
+        # Implementation note: We try to find a path that ends on the one
+        # terminal for which there's a node for every element of the given
+        # item whose "then" child is not the zero terminal.
+
+        node = self
+
+        if len(item) == 0:
+            while not (node.is_zero() or node.is_one()):
+                node = node.else_
+            return node.is_one()
+
+        elements = sorted(item, reverse=True)
+
+        while (not (node.is_zero() or node.is_one())) and elements:
+            el = elements[-1]
+            if el > node.key:
+                node = node.else_
+            elif el == node.key:
+                node = node.then_
+                elements.pop()
+            else:
+                node = node.else_
+                elements.pop()
+
+        while not (node.is_zero() or node.is_one()):
+            node = node.else_
+
+        return (not bool(elements)) and node.is_one()
 
     def __iter__(self):
 

@@ -1,71 +1,38 @@
 # Copyright (c) 2015, Dimitri Racordon.
 # Licensed under the Apache License, Version 2.0.
 
-from collections.abc import Set, Hashable
-from functools import reduce, wraps
-from operator import or_
+from functools import wraps
 from weakref import WeakValueDictionary
 
-from ydd.utils import hash_node
+from .abc import AbstractEngine, AbstractRoot
 
 
-class YDD(Set, Hashable):
+class Root(AbstractRoot):
 
     def __init__(self, key=None, then_=None, else_=None, creator=None):
-        self.key = key
-        self.then_ = then_
-        self.else_ = else_
+        self._key = key
+        self._then = then_
+        self._else = else_
 
         self.creator = creator
 
-    def __contains__(self, item):
+    @property
+    def key(self):
+        return self._key
 
-        # Implementation note: We try to find a path that ends on the one
-        # terminal for which there's a node for every element of the given
-        # item whose "then" child is not the zero terminal.
+    @property
+    def then_(self):
+        return self._then
 
-        elements = sorted(item, reverse=True)
-        node = self
+    @property
+    def else_(self):
+        return self._else
 
-        while (node not in (self.creator.one, self.creator.zero)) and elements:
-            el = elements[-1]
-            if el > node.key:
-                node = node.else_
-            elif el == node.key:
-                node = node.then_
-                elements.pop()
-            else:
-                node = node.else_
-                elements.pop()
+    def is_zero(self):
+        return False
 
-        return (not bool(elements)) and (node is self.creator.one)
-
-    def __iter__(self):
-
-        # Implementation note: The iteration process sees the DD as a tree,
-        # and explores all his nodes with a in-order traversal. During this
-        # traversal, we store all the of the "then" parents, so that we can
-        # produce a item whenever we reach the one terminal.
-
-        rv = []
-        stack = []
-        node = self
-
-        while node is not self.creator.zero:
-            if node is self.creator.one:
-                yield frozenset(rv)
-                try:
-                    node = stack.pop()
-                except IndexError:
-                    return
-                rv = list(filter(lambda e: e < node.key, rv)) + [node.key]
-                node = node.then_
-            elif node.else_ is not self.creator.zero:
-                stack.append(node)
-                node = node.else_
-            else:
-                rv.append(node.key)
-                node = node.then_
+    def is_one(self):
+        return False
 
     def __len__(self):
         return self.creator.len(self)
@@ -104,12 +71,6 @@ class YDD(Set, Hashable):
     def __eq__(self, other):
         return self is other
 
-    def __ge__(self, other):
-        return not (other < self)
-
-    def __gt__(self, other):
-        return not (other < self)
-
     def __or__(self, other):
         return self.creator.union(self, other)
 
@@ -122,56 +83,22 @@ class YDD(Set, Hashable):
     def __xor__(self, other):
         return self.creator.symmetric_difference(self, other)
 
-    def isdisjoint(self, other):
-        return (self & other) is self.creator.zero
-
-    def pprint(self, indent=4, level=1):
-        indentation = (' ' * indent * level)
-
-        rv = str(self.key) + ' -> (\n'
-        rv += indentation + 'then: ' + self.then_.pprint(indent=indent, level=level + 1)
-        rv += indentation + 'else: ' + self.else_.pprint(indent=indent, level=level + 1)
-        rv += (' ' * indent * (level - 1)) + ')\n'
-
-        if (level == 1):
-            rv = rv.strip('\n')
-        return rv
-
-    def _hash(self):
-        # See the notes on hashability using collections.abc.Set.
-        return hash(self)
-
     def __hash__(self):
-        return hash_node(self.key, self.then_, self.else_)
-
-    def __str__(self):
-        return str(list(self))
-
-    def __repr__(self):
-        return '%r -> (then: %r, else: %r)' % (self.key, self.then_, self.else_)
+        return hash((self.key, id(self.then_), id(self.else_)))
 
 
-class Terminal(YDD):
+class OneTerminal(Root):
 
-    def pprint(self, indent=2, level=1):
-        return self.key + '\n'
-
-    def __str__(self):
-        return self.key
-
-    def __repr__(self):
-        return self.key
-
-
-class OneTerminal(Terminal):
+    def is_one(self):
+        return True
 
     def __lt__(self, other):
-        if other in (self, self.creator.zero):
+        if other.is_zero() or other.is_one():
             return False
         return self < other.else_
 
     def __le__(self, other):
-        if other in (self, self.creator.zero):
+        if other.is_zero() or other.is_one():
             return self is other
         return self <= other.else_
 
@@ -182,7 +109,10 @@ class OneTerminal(Terminal):
         return other is self.creator.zero
 
 
-class ZeroTerminal(Terminal):
+class ZeroTerminal(Root):
+
+    def is_zero(self):
+        return True
 
     def __contains__(self, el):
         return False
@@ -200,15 +130,15 @@ class ZeroTerminal(Terminal):
         return False
 
 
-class Engine(object):
+class DefaultEngine(AbstractEngine):
 
     def __init__(self, use_weak_table=False):
-        self.one = OneTerminal(key='$1', creator=self)
-        self.zero = ZeroTerminal(key='$0', creator=self)
+        self.zero = ZeroTerminal(key=False, creator=self)
+        self.one = OneTerminal(key=True, creator=self)
 
         self._table = {
-            hash(self.one): self.one,
-            hash(self.zero): self.zero
+            self._hash_node(self.zero): self.zero,
+            self._hash_node(self.one): self.one
         }
 
         if use_weak_table:
@@ -221,9 +151,9 @@ class Engine(object):
             @wraps(fn)
             def decorated(self, *args):
                 if keygen is None:
-                    cache_key = hash(tuple([fn.__name__] + list(args)))
+                    cache_key = tuple([fn.__name__] + [id(arg) for arg in args])
                 else:
-                    cache_key = hash(tuple([fn.__name__] + keygen(*args)))
+                    cache_key = tuple([fn.__name__] + keygen(*args))
                 try:
                     return self._cache[cache_key]
                 except KeyError:
@@ -232,47 +162,26 @@ class Engine(object):
             return decorated
         return decorate
 
-    def make(self, *iterables):
-        # If there aren't any iterables, return a DD encoding the empty set.
-        if len(iterables) == 0:
+    def make_terminal(self, terminal):
+        if terminal:
+            return self.one
+        else:
             return self.zero
 
-        # Generate a DD for all given iterables, and make their union.
-        return reduce(or_, (self.make_one(it) for it in iterables))
-
-    def make_one(self, iterable):
-        # If there aren't any elements, return a DD encoding the empty set.
-        if len(iterable) == 0:
-            return self.one
-
-        # Make sure the elements are unique, and sort them greatest first.
-        elements = sorted(set(iterable), reverse=True)
-
-        # Create the new DD.
-        rv = self.one
-        for i, el in enumerate(elements):
-            rv = self._make_node(key=el, then_=rv, else_=self.zero)
-
-        return rv
-
-    def _make_node(self, key, then_, else_):
+    def make_node(self, key, then_, else_): 
         # Apply the ZDD-reduction rule at the node creation, so we make sure
         # to create canonical forms only.
         if then_ is self.zero:
             return else_
 
-        # Try to return the node from the cache if it's already been built.
-        # Note that if is faster to try accessing the table and catch KeyError
-        # KeyError exceptions if we expect the table to grow big enough to be
-        # likely to already contain the desired nodes.
-        h = hash_node(key, then_, else_)
+        # Create a temporary node.
+        rv = Root(key=key, then_=then_, else_=else_, creator=self)
+
+        # Try to return the node from the unique table.
+        h = self._hash_node(rv)
         try:
             return self._table[h]
         except KeyError:
-            # Since the unique table doesn't keep the objects that aren't
-            # otherwise referenced, we are forced to assign the built DD to a
-            # temporary variable before we insert it in the unique table.
-            rv = YDD(key=key, then_=then_, else_=else_, creator=self)
             self._table[h] = rv
             return rv
 
@@ -303,7 +212,7 @@ class Engine(object):
             # it doesn't have an accepting path where the left's starting key
             # appears. As a result, we should continue only on the "else"
             # child of the left operand.
-            return self._make_node(
+            return self.make_node(
                 key=left.key,
                 then_=left.then_,
                 else_=self.union(left.else_, right)
@@ -312,7 +221,7 @@ class Engine(object):
         if right.key == left.key:
             # If the left operand start with the same key as the right one,
             # then we should continue on the both their children.
-            return self._make_node(
+            return self.make_node(
                 key=left.key,
                 then_=self.union(left.then_, right.then_),
                 else_=self.union(left.else_, right.else_)
@@ -324,7 +233,7 @@ class Engine(object):
             # appears. As a result, we should return a new node that puts the
             # the "then" child of the right operand on its own "then" child,
             # and continue on its "else" child.
-            return self._make_node(
+            return self.make_node(
                 key=right.key,
                 then_=right.then_,
                 else_=self.union(left, right.else_)
@@ -365,7 +274,7 @@ class Engine(object):
         if right.key == left.key:
             # If the left operand start with the same key as the right one,
             # then we should continue on the both their children.
-            return self._make_node(
+            return self.make_node(
                 key=left.key,
                 then_=self.intersection(left.then_, right.then_),
                 else_=self.intersection(left.else_, right.else_)
@@ -378,7 +287,7 @@ class Engine(object):
             # right operand and continue on its "else" child.
             return self.intersection(left, right.else_)
 
-    @cached(keygen=lambda l, r: [l, r] if (id(l) < id(r)) else [r, l])
+    @cached()
     def difference(self, left, right):
         if right is self.zero:
             # If the right operand is the zero terminal, then we simply return
@@ -408,7 +317,7 @@ class Engine(object):
             # it doesn't have an accepting path where the left's starting key
             # appears. As a result, we can continue only on the "else" child
             # of the left operand only.
-            return self._make_node(
+            return self.make_node(
                 key=left.key,
                 then_=left.then_,
                 else_=self.difference(left.else_, right)
@@ -417,7 +326,7 @@ class Engine(object):
         if right.key == left.key:
             # If the left operand start with the same key as the right one,
             # then we should continue on the both their children.
-            return self._make_node(
+            return self.make_node(
                 key=left.key,
                 then_=self.difference(left.then_, right.then_),
                 else_=self.difference(left.else_, right.else_)
@@ -449,19 +358,17 @@ class Engine(object):
             return right
 
         if left is self.one:
-            # If the left operand is the one terminal, then we return it as-is
-            # only if the "else-most" terminal of the right operand is zero.
-            node = right
-            while node not in (self.one, self.zero):
-                node = node.else_
-            return self.one if node is self.zero else self.zero
+            # If the left operand is the one terminal, then we can keep all
+            # paths from the right one, except its "else-most" terminal that
+            # should be zero, in order to exclude the left operand.
+            return self._update_else_most_terminal(right, self.zero)
 
         if right.key > left.key:
             # If the right operand starts with a greater key, it implies that
             # it doesn't have an accepting path where the left's starting key
             # appears. As a result, we can continue only on the "else" child
             # of the left operand only.
-            return self._make_node(
+            return self.make_node(
                 key=left.key,
                 then_=left.then_,
                 else_=self.symmetric_difference(left.else_, right)
@@ -470,7 +377,7 @@ class Engine(object):
         if right.key == left.key:
             # If the left operand start with the same key as the right one,
             # then we should continue on the both their children.
-            return self._make_node(
+            return self.make_node(
                 key=left.key,
                 then_=self.symmetric_difference(left.then_, right.then_),
                 else_=self.symmetric_difference(left.else_, right.else_)
@@ -481,14 +388,14 @@ class Engine(object):
             # it doesn't have an accepting path where the right's starting key
             # appears. As a result, we can keep then "then" child of the right
             # operand unchanged, and continue on its "else" child.
-            return self._make_node(
+            return self.make_node(
                 key=right.key,
                 then_=right.then_,
                 else_=self.difference(left, right.else_)
             )
             return self.difference(left, right.else_)
 
-    @cached(keygen=lambda ydd: [ydd])
+    @cached()
     def len(self, ydd):
         if ydd is self.zero:
             return 0
@@ -496,10 +403,13 @@ class Engine(object):
             return 1
         return self.len(ydd.else_) + self.len(ydd.then_)
 
+    def _hash_node(self, node):
+        return (node.key, id(node.then_), id(node.else_))
+
     def _update_else_most_terminal(self, ydd, child):
         if ydd in (self.one, self.zero):
             return child
         elif ydd.else_ in (self.one, self.zero):
-            return self._make_node(key=ydd.key, then_=ydd.then_, else_=child)
+            return self.make_node(key=ydd.key, then_=ydd.then_, else_=child)
         else:
             return self._update_else_most_terminal(ydd.else_, child)
