@@ -65,6 +65,10 @@ namespace ydd {
                 return *this;
             }
 
+            bool operator== (const Root& other) const {
+                return this->node == other.node;
+            }
+
             Root operator| (const Root& other) const {
                 if (this->is_zero()) {
                     return other;
@@ -117,9 +121,6 @@ namespace ydd {
                 return cache_record.result;
             }
 
-            // Key key;
-            const Node* node;
-
             inline const Key& key() const {
                 return this->node->key;
             }
@@ -145,10 +146,36 @@ namespace ydd {
                 return node_hasher(this->node);
             }
 
-            bool operator== (const Root& other) const {
-                return this->node == other.node;
-            }
+            // Key key;
+            const Node* node;
         };
+
+        Engine() : _union_cache(Config::union_cache_size) {
+            this->_unique_table._engine = this;
+        }
+
+        Engine(const Engine&) = delete;
+        Engine(Engine&&) = delete;
+        Engine& operator= (const Engine&) = delete;
+        Engine& operator= (Engine&&) = delete;
+
+        ~Engine() {}
+
+        Root make_node(Key key, const Root& then_, const Root& else_) {
+            if (then_.is_zero()) {
+                return else_;
+            }
+
+            return this->_unique_table[Node(key, then_, else_)];
+        }
+
+        Root make_terminal(bool terminal) {
+            if (terminal) {
+                return this->_unique_table[Node(terminal)];
+            } else {
+                return Root();
+            }
+        }
 
     private:
         friend class Root;
@@ -199,6 +226,16 @@ namespace ydd {
             : ref_count(0), terminal(terminal), key() {
             }
 
+            bool operator== (const Node& other) const {
+                return
+                    (this->terminal == other.terminal)
+                    and (this->key == other.key)
+                    and (this->then_ == other.then_)
+                    and (this->else_ == other.else_);
+                    // and (this->then_key == other.then_key)
+                    // and (this->else_key == other.else_key);
+            }
+
             std::size_t hash() const {
                 std::hash<bool> bool_hasher;
                 // fixme (std::hash<Root>)
@@ -210,16 +247,6 @@ namespace ydd {
                 rv ^= this->else_.hash() + 0x9e3779b9 + (rv << 6) + (rv >> 2);
                 rv ^= key_hasher(this->key) + 0x9e3779b9 + (rv << 6) + (rv >> 2);
                 return rv;
-            }
-
-            bool operator== (const Node& other) const {
-                return
-                    (this->terminal == other.terminal)
-                    and (this->key == other.key)
-                    and (this->then_ == other.then_)
-                    and (this->else_ == other.else_);
-                    // and (this->then_key == other.then_key)
-                    // and (this->else_key == other.else_key);
             }
 
             mutable std::size_t ref_count;
@@ -271,35 +298,6 @@ namespace ydd {
 
         UniqueTable _unique_table;
         Cache _union_cache;
-
-    public:
-        Engine() : _union_cache(Config::union_cache_size) {
-            this->_unique_table._engine = this;
-        }
-
-        Engine(const Engine&) = delete;
-        Engine(Engine&&) = delete;
-        Engine& operator= (const Engine&) = delete;
-        Engine& operator= (Engine&&) = delete;
-
-        ~Engine() {}
-
-        Root make_node(Key key, const Root& then_, const Root& else_) {
-            if (then_.is_zero()) {
-                return else_;
-            }
-
-            return this->_unique_table[Node(key, then_, else_)];
-        }
-
-        Root make_terminal(bool terminal) {
-            if (terminal) {
-                return this->_unique_table[Node(terminal)];
-            } else {
-                return Root();
-            }
-        }
-
     };
 
 }
