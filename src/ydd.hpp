@@ -1,3 +1,6 @@
+#ifndef __cppydd_ydd__
+#define __cppydd_ydd__
+
 #include <cstddef>
 #include <functional>
 #include <stdexcept>
@@ -300,3 +303,5 @@ namespace ydd {
     };
 
 }
+
+#endif
