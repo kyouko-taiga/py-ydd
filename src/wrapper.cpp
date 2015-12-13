@@ -15,6 +15,7 @@ struct Config {
     static const std::size_t buckets_security = 4;
     static const std::size_t union_cache_size = 80;
     static const std::size_t intersection_cache_size = 80;
+    static const std::size_t difference_cache_size = 80;
 };
 
 
@@ -45,6 +46,7 @@ BOOST_PYTHON_MODULE(_cpp) {
         .def(self != self)
         .def(self | self)
         .def(self & self)
+        .def(self - self)
 
         .def("is_one", &IntRoot::is_one)
         .def("is_zero", &IntRoot::is_zero)
