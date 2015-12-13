@@ -3,6 +3,38 @@
 
 from abc import ABCMeta, abstractmethod, abstractproperty
 from collections.abc import Hashable
+from functools import reduce
+from operator import or_
+
+
+class AbstractEngine(metaclass=ABCMeta):
+
+    @abstractmethod
+    def make_terminal(self, terminal):
+        pass
+
+    @abstractmethod
+    def make_node(self, key, then_, else_):
+        pass
+
+    def make(self, *containers):
+        if len(containers) == 0:
+            return self.make_terminal(False)
+        return reduce(or_, (self.make_from_container(it) for it in containers))
+
+    def make_from_container(self, container):
+        if len(container) == 0:
+            return self.make_terminal(True)
+
+        # Remove duplicates and sort the container.
+        elements = sorted(set(container), reverse=True)
+
+        # Create the DD.
+        rv = self.make_terminal(True)
+        zero = self.make_terminal(False)
+        for i, el in enumerate(elements):
+            rv = self.make_node(el, rv, zero)
+        return rv
 
 
 class AbstractRoot(Hashable, metaclass=ABCMeta):
