@@ -174,6 +174,54 @@ namespace ydd {
                 return cache_record.result;
             }
 
+            Root operator& (const Root& other) const {
+                if (this->is_zero()) {
+                    return *this;
+                } else if (other.is_zero()) {
+                    return other;
+                }
+
+                // Try to get the result from the cache.
+                auto& cache_record = this->_engine->_intersection_cache(*this, other);
+                if ((cache_record.left == *this) and (cache_record.right == other)) {
+                    return cache_record.result;
+                } else {
+                    cache_record.left = *this;
+                    cache_record.right = other;
+                }
+
+                if (this->is_one()) {
+                    const Root* else_most = &other;
+                    while (!(else_most->is_zero() or else_most->is_one())) {
+                        else_most = &else_most->else_();
+                    }
+                    cache_record.result = *else_most;
+                }
+
+                else if (other.is_one()) {
+                    const Root* else_most = this;
+                    while (!(else_most->is_zero() or else_most->is_one())) {
+                        else_most = &else_most->else_();
+                    }
+                    cache_record.result = *else_most;
+                }
+
+                else if (other.key() > this->key()) {
+                    cache_record.result = this->else_() & other;
+                }
+
+                else if (other.key() == this->key()) {
+                    cache_record.result = this->_engine->make_node(
+                        this->key(), this->then_() & other.then_(), this->else_() & other.else_());
+                }
+
+                else if (other.key() < this->key()) {
+                    cache_record.result = *this & other.else_();
+                }
+
+                return cache_record.result;
+            }
+
             inline const Key& key() const {
                 return this->node->key;
             }
@@ -211,7 +259,9 @@ namespace ydd {
             const Node* node;
         };
 
-        Engine() : _union_cache(Config::union_cache_size) {
+        Engine()
+        : _union_cache(Config::union_cache_size),
+          _intersection_cache(Config::intersection_cache_size) {
             this->_unique_table._engine = this;
         }
 
@@ -361,6 +411,7 @@ namespace ydd {
 
         UniqueTable _unique_table;
         Cache _union_cache;
+        Cache _intersection_cache;
     };
 
 }
