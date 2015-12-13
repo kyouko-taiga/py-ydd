@@ -38,7 +38,10 @@ BOOST_PYTHON_MODULE(_cpp) {
         .add_property("else_", make_function(
             &IntRoot::else_, return_internal_reference<>()))
 
+        .def(self < self)
+        .def(self <= self)
         .def(self == self)
+        .def(self != self)
         .def(self | self)
 
         .def("is_one", &IntRoot::is_one)

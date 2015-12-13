@@ -65,8 +65,61 @@ namespace ydd {
                 return *this;
             }
 
+            bool operator< (const Root& other) const {
+                if (this->is_zero()) {
+                    return !other.is_zero();
+                }
+
+                if (other.is_zero() or other.is_one()) {
+                    return false;
+                }
+
+                if (this->is_one()) {
+                    return *this <= other.else_();
+                }
+
+                if (other.key() > this->key()) {
+                    return false;
+                } else if (other.key() == this->key()) {
+                    return
+                        (*this != other)
+                        and (this->then_() <= other.then_())
+                        and (this->else_() <= other.else_());
+                } else {
+                    return *this < other.else_();
+                }
+            }
+
+            bool operator<= (const Root& other) const {
+                if (this->is_zero()) {
+                    return true;
+                }
+
+                if (other.is_zero() or other.is_one()) {
+                    return *this == other;
+                }
+
+                if (this->is_one()) {
+                    return *this <= other.else_();
+                }
+
+                if (other.key() > this->key()) {
+                    return false;
+                } else if (other.key() == this->key()) {
+                    return
+                        (*this == other)
+                        or ((this->then_() <= other.then_()) and (this->else_() <= other.else_()));
+                } else {
+                    return *this <= other.else_();
+                }
+            }
+
             bool operator== (const Root& other) const {
                 return this->node == other.node;
+            }
+
+            bool operator!= (const Root& other) const {
+                return this->node != other.node;
             }
 
             Root operator| (const Root& other) const {
