@@ -62,7 +62,7 @@ namespace ydd {
                 return *this;
             }
 
-            Root operator+ (const Root& other) const {
+            Root operator| (const Root& other) const {
                 if (this->is_zero()) {
                     return other;
                 } else if (other.is_zero()) {
@@ -83,7 +83,7 @@ namespace ydd {
                         cache_record.result = *this;
                     } else {
                         cache_record.result = this->_engine->make_node(
-                            other.key(), other.then_(), other.else_() + *this);
+                            other.key(), other.then_(), other.else_() | *this);
                     }
                 }
 
@@ -92,23 +92,23 @@ namespace ydd {
                         cache_record.result = other;
                     } else {
                         cache_record.result = this->_engine->make_node(
-                            this->key(), this->then_(), this->else_() + other);
+                            this->key(), this->then_(), this->else_() | other);
                     }
                 }
 
                 else if (other.key() > this->key()) {
                     cache_record.result = this->_engine->make_node(
-                        this->key(), this->then_(), this->else_() + other);
+                        this->key(), this->then_(), this->else_() | other);
                 }
 
                 else if (other.key() == this->key()) {
                     cache_record.result = this->_engine->make_node(
-                        this->key(), this->then_() + other.then_(), this->else_() + other.else_());
+                        this->key(), this->then_() | other.then_(), this->else_() | other.else_());
                 }
 
                 else if (other.key() < this->key()) {
                     cache_record.result = this->_engine->make_node(
-                        other.key(), other.then_(), other.else_() + *this);
+                        other.key(), other.then_(), other.else_() | *this);
                 }
 
                 return cache_record.result;
