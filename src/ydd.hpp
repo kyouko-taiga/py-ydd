@@ -3,7 +3,6 @@
 
 #include <cstddef>
 #include <functional>
-#include <stdexcept>
 
 
 namespace ydd {
@@ -51,7 +50,7 @@ namespace ydd {
                 if (this->node != nullptr) {
                     this->node->ref_count--;
                     if (this->node->ref_count == 0) {
-                        this->node->~Node();
+                        this->_engine->_unique_table.remove(this->node);
                         this->node = nullptr;
                     }
                 }
@@ -432,6 +431,11 @@ namespace ydd {
             : ref_count(0), size(0), terminal(false), key() {
             }
 
+            Node(const Node& other)
+            : ref_count(other.ref_count), size(other.size), terminal(other.terminal),
+              key(other.key), then_(other.then_), else_(other.else_) {
+            }
+
             Node(const Key& key, const Root& then_, const Root& else_)
             : ref_count(0), size(then_.size() + else_.size()), terminal(false),
               key(key), then_(then_), else_(else_) {
@@ -478,38 +482,105 @@ namespace ydd {
         class UniqueTable {
         public:
             UniqueTable()
-            : nodes(new Node[Config::buckets_nb * Config::buckets_security]) {
+            : nodes(new Node[Config::buckets_nb]),
+              _backup_nodes(new NodeList*[Config::buckets_nb]) {
             }
 
             ~UniqueTable() {
                 delete[] this->nodes;
+
+                for (auto i = 0; i < Config::buckets_nb; ++i) {
+                    if (this->_backup_nodes[i] != nullptr) {
+                        delete this->_backup_nodes[i];
+                    }
+                }
+                delete[] this->_backup_nodes;
+            }
+
+            void remove(const Node* node) {
+                std::size_t i = node->hash() % Config::buckets_nb;
+                if (this->_backup_nodes[i] != nullptr) {
+                    NodeList* cursor = this->_backup_nodes[i];
+
+                    if (node == &this->nodes[i]) {
+                        // Move the first node of the backup table to the
+                        // primary table.
+                        this->nodes[i].~Node();
+                        this->nodes[i] = *cursor->node;
+                        this->_backup_nodes[i] = cursor->next;
+                        delete cursor;
+                    } else {
+                        // Look for a node that matches in the backup table.
+                        NodeList* predecessor = nullptr;
+                        while (cursor != nullptr) {
+                            if (node == cursor->node) {
+                                if (predecessor != nullptr) {
+                                    predecessor->next = cursor->next;
+                                }
+                                delete cursor;
+                                return;
+                            }
+                        }
+                    }
+                }
             }
 
             Root operator[] (const Node& node) {
-                // Check whether the node already exists in the table.
-                std::size_t idx = (node.hash() % Config::buckets_nb) * Config::buckets_security;
-                for (auto i = idx; i < idx + Config::buckets_security; ++i) {
-                    if ((this->nodes[i].ref_count > 0) and (node == this->nodes[i])) {
-                        // To change when we'll be using attributed edges.
-                        return Root(*this->_engine, &this->nodes[i]);
+                // Try to insert the new node in the primary table. We do this
+                // first so that all subsequent operations can assume that the
+                // primary table isn't empty.
+                std::size_t i = node.hash() % Config::buckets_nb;
+                if (this->nodes[i].ref_count == 0) {
+                    this->nodes[i] = node;
+                    return Root(*this->_engine, &this->nodes[i]);
+                }
+
+                // Check whether the node in the primary table matches.
+                if ((this->nodes[i].ref_count > 0) and (node == this->nodes[i])) {
+                    // To change when we'll be using attributed edges.
+                    return Root(*this->_engine, &this->nodes[i]);
+                }
+
+                // Look for a node that matches in the backup table.
+                if (this->_backup_nodes[i] != nullptr) {
+                    NodeList* cursor = this->_backup_nodes[i];
+                    while (cursor != nullptr) {
+                        if (node == *cursor->node) {
+                            return Root(*this->_engine, cursor->node);
+                        } else {
+                            cursor = cursor->next;
+                        }
                     }
                 }
 
-                // Insert the new node in the table.
-                for (auto i = idx; i < idx + Config::buckets_security; ++i) {
-                    if (this->nodes[i].ref_count == 0) {
-                        this->nodes[i] = std::move(node);
-                        
-                        // To change when we'll be using attributed edges.
-                        return Root(*this->_engine, &this->nodes[i]);
-                    }
-                }
-
-                throw std::overflow_error("The table is full.");
+                // Insert the new node in the backup table.
+                Node* new_node = new Node(node);
+                this->_backup_nodes[i] = new NodeList(new_node, this->_backup_nodes[i]);
+                return Root(*this->_engine, new_node);
             }
 
             Engine* _engine;
             Node* nodes;
+
+        private:
+            class NodeList {
+            public:
+                NodeList(Node* node, NodeList* next)
+                : node(node), next(next) {
+                }
+
+                ~NodeList() {
+                    if (this->next != nullptr) {
+                        delete next;
+                    }
+                    delete node;
+                }
+
+                Node* node;
+                NodeList* next;
+            };
+
+            NodeList** _backup_nodes;
         };
 
         UniqueTable _unique_table;
