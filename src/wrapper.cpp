@@ -12,6 +12,7 @@
 struct Config {
     using Key = int;
     static const std::size_t buckets_nb = 8000;
+    static const std::size_t buckets_security = 4;
     static const std::size_t union_cache_size = 80;
     static const std::size_t intersection_cache_size = 80;
     static const std::size_t difference_cache_size = 80;
