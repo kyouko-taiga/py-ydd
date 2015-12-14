@@ -1,3 +1,6 @@
+// Copyright (c) 2015, Dimitri Racordon.
+// Licensed under the Apache License, Version 2.0.
+
 #ifndef __cppydd_ydd__
 #define __cppydd_ydd__
 
