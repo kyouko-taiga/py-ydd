@@ -360,11 +360,24 @@ namespace ydd {
             const Node* node;
         };
 
-        Engine()
-        : _union_cache(Config::union_cache_size),
-          _intersection_cache(Config::intersection_cache_size),
-          _difference_cache(Config::difference_cache_size),
-          _symmetric_difference_cache(Config::symmetric_difference_cache_size) {
+        Engine(
+            std::size_t bucket_count=65536,
+            std::size_t bucket_size=4,
+            std::size_t union_cache_size=512,
+            std::size_t intersection_cache_size=512,
+            std::size_t difference_cache_size=512,
+            std::size_t symmetric_difference_cache_size=512
+        ) :
+            bucket_count(bucket_count),
+            bucket_size(bucket_size),
+            _unique_table(bucket_count, bucket_size),
+            _union_cache(union_cache_size),
+            _intersection_cache(intersection_cache_size),
+            _difference_cache(difference_cache_size),
+            _symmetric_difference_cache(symmetric_difference_cache_size)
+        {
+            // fixme: Throw an exception if the user tries to set a cache size
+            // lower than 1.
             this->_unique_table._engine = this;
         }
 
@@ -372,8 +385,6 @@ namespace ydd {
         Engine(Engine&&) = delete;
         Engine& operator= (const Engine&) = delete;
         Engine& operator= (Engine&&) = delete;
-
-        ~Engine() {}
 
         Root make_node(Key key, const Root& then_, const Root& else_) {
             if (then_.is_zero()) {
@@ -390,6 +401,9 @@ namespace ydd {
                 return Root();
             }
         }
+
+        const std::size_t bucket_count;
+        const std::size_t bucket_size;
 
     private:
         friend class Root;
@@ -477,8 +491,10 @@ namespace ydd {
 
         class UniqueTable {
         public:
-            UniqueTable()
-            : nodes(new Node[Config::buckets_nb * Config::buckets_security]) {
+            UniqueTable(std::size_t bucket_count, std::size_t bucket_size) :
+                bucket_count(bucket_count),
+                bucket_size(bucket_size),
+                nodes(new Node[bucket_count * bucket_size]) {
             }
 
             ~UniqueTable() {
@@ -487,8 +503,8 @@ namespace ydd {
 
             Root operator[] (const Node& node) {
                 // Check whether the node already exists in the table.
-                std::size_t idx = (node.hash() % Config::buckets_nb) * Config::buckets_security;
-                for (auto i = idx; i < idx + Config::buckets_security; ++i) {
+                std::size_t idx = (node.hash() % this->bucket_count) * this->bucket_size;
+                for (auto i = idx; i < idx + this->bucket_size; ++i) {
                     if ((this->nodes[i].ref_count > 0) and (node == this->nodes[i])) {
                         // To change when we'll be using attributed edges.
                         return Root(*this->_engine, &this->nodes[i]);
@@ -496,7 +512,7 @@ namespace ydd {
                 }
 
                 // Insert the new node in the table.
-                for (auto i = idx; i < idx + Config::buckets_security; ++i) {
+                for (auto i = idx; i < idx + this->bucket_size; ++i) {
                     if (this->nodes[i].ref_count == 0) {
                         this->nodes[i] = std::move(node);
                         
@@ -507,6 +523,9 @@ namespace ydd {
 
                 throw std::overflow_error("The table is full.");
             }
+
+            const std::size_t bucket_count;
+            const std::size_t bucket_size;
 
             Engine* _engine;
             Node* nodes;

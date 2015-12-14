@@ -11,12 +11,6 @@
 
 struct Config {
     using Key = int;
-    static const std::size_t buckets_nb = 8000;
-    static const std::size_t buckets_security = 4;
-    static const std::size_t union_cache_size = 80;
-    static const std::size_t intersection_cache_size = 80;
-    static const std::size_t difference_cache_size = 80;
-    static const std::size_t symmetric_difference_cache_size = 80;
 };
 
 
@@ -55,7 +49,20 @@ BOOST_PYTHON_MODULE(_cpp) {
         .def("__len__", &IntRoot::size)
         .def("__hash__", &IntRoot::hash);
 
-    class_<IntEngine, boost::noncopyable>("IntEngine", init<>())
+    using szt = std::size_t;
+
+    class_<IntEngine, boost::noncopyable>(
+        "IntEngine", init<optional<szt, szt, szt, szt, szt, szt>>((
+            arg("bucket_count"),
+            arg("bucket_size"),
+            arg("union_cache_size"),
+            arg("intersection_cache_size"),
+            arg("difference_cache_size"),
+            arg("symmetric_difference_cache_size"))))
+
+        .def_readonly("bucket_count", &IntEngine::bucket_count)
+        .def_readonly("bucket_size", &IntEngine::bucket_size)
+
         .def("make_terminal", &IntEngine::make_terminal)
         .def("make_node", &IntEngine::make_node);
 }
