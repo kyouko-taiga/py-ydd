@@ -134,45 +134,48 @@ namespace ydd {
                 auto& cache_record = this->_engine->_union_cache(*this, other);
                 if ((cache_record.left == *this) and (cache_record.right == other)) {
                     return cache_record.result;
-                } else {
-                    cache_record.left = *this;
-                    cache_record.right = other;
                 }
+
+                // Compute the result.
+                Root rv;
 
                 if (this->is_one()) {
                     if (other.is_one() or other.is_zero()) {
-                        cache_record.result = *this;
+                        rv = *this;
                     } else {
-                        cache_record.result = this->_engine->make_node(
+                        rv = this->_engine->make_node(
                             other.key(), other.then_(), other.else_() | *this);
                     }
                 }
 
                 else if (other.is_one()) {
                     if (this->is_one() or this->is_zero()) {
-                        cache_record.result = other;
+                        rv = other;
                     } else {
-                        cache_record.result = this->_engine->make_node(
+                        rv = this->_engine->make_node(
                             this->key(), this->then_(), this->else_() | other);
                     }
                 }
 
                 else if (other.key() > this->key()) {
-                    cache_record.result = this->_engine->make_node(
+                    rv = this->_engine->make_node(
                         this->key(), this->then_(), this->else_() | other);
                 }
 
                 else if (other.key() == this->key()) {
-                    cache_record.result = this->_engine->make_node(
+                    rv = this->_engine->make_node(
                         this->key(), this->then_() | other.then_(), this->else_() | other.else_());
                 }
 
                 else if (other.key() < this->key()) {
-                    cache_record.result = this->_engine->make_node(
+                    rv = this->_engine->make_node(
                         other.key(), other.then_(), other.else_() | *this);
                 }
 
-                return cache_record.result;
+                cache_record.left = *this;
+                cache_record.right = other;
+                cache_record.result = rv;
+                return rv;
             }
 
             Root operator& (const Root& other) const {
@@ -183,20 +186,20 @@ namespace ydd {
                 }
 
                 // Try to get the result from the cache.
-                auto& cache_record = this->_engine->_intersection_cache(*this, other);
+                auto& cache_record = this->_engine->_union_cache(*this, other);
                 if ((cache_record.left == *this) and (cache_record.right == other)) {
                     return cache_record.result;
-                } else {
-                    cache_record.left = *this;
-                    cache_record.right = other;
                 }
+
+                // Compute the result.
+                Root rv;
 
                 if (this->is_one()) {
                     const Root* else_most = &other;
                     while (!(else_most->is_zero() or else_most->is_one())) {
                         else_most = &else_most->else_();
                     }
-                    cache_record.result = *else_most;
+                    rv = *else_most;
                 }
 
                 else if (other.is_one()) {
@@ -204,23 +207,26 @@ namespace ydd {
                     while (!(else_most->is_zero() or else_most->is_one())) {
                         else_most = &else_most->else_();
                     }
-                    cache_record.result = *else_most;
+                    rv = *else_most;
                 }
 
                 else if (other.key() > this->key()) {
-                    cache_record.result = this->else_() & other;
+                    rv = this->else_() & other;
                 }
 
                 else if (other.key() == this->key()) {
-                    cache_record.result = this->_engine->make_node(
+                    rv = this->_engine->make_node(
                         this->key(), this->then_() & other.then_(), this->else_() & other.else_());
                 }
 
                 else if (other.key() < this->key()) {
-                    cache_record.result = *this & other.else_();
+                    rv = *this & other.else_();
                 }
 
-                return cache_record.result;
+                cache_record.left = *this;
+                cache_record.right = other;
+                cache_record.result = rv;
+                return rv;
             }
 
             Root operator- (const Root& other) const {
@@ -229,13 +235,13 @@ namespace ydd {
                 }
 
                 // Try to get the result from the cache.
-                auto& cache_record = this->_engine->_difference_cache(*this, other);
+                auto& cache_record = this->_engine->_union_cache(*this, other);
                 if ((cache_record.left == *this) and (cache_record.right == other)) {
                     return cache_record.result;
-                } else {
-                    cache_record.left = *this;
-                    cache_record.right = other;
                 }
+
+                // Compute the result.
+                Root rv;
 
                 if (this->is_one()) {
                     const Root* else_most = &other;
@@ -244,32 +250,35 @@ namespace ydd {
                     }
 
                     if (else_most->is_zero()) {
-                        cache_record.result = *this;
+                        rv = *this;
                     } else {
-                        cache_record.result = this->_engine->make_terminal(false);
+                        rv = this->_engine->make_terminal(false);
                     }
                 }
 
                 else if (other.is_one()) {
-                    cache_record.result = this->_engine->make_node(
+                    rv = this->_engine->make_node(
                         this->key(), this->then_(), this->else_() - other);
                 }
 
                 else if (other.key() > this->key()) {
-                    cache_record.result = this->_engine->make_node(
+                    rv = this->_engine->make_node(
                         this->key(), this->then_(), this->else_() - other);
                 }
 
                 else if (other.key() == this->key()) {
-                    cache_record.result = this->_engine->make_node(
+                    rv = this->_engine->make_node(
                         this->key(), this->then_() - other.then_(), this->else_() - other.else_());
                 }
 
                 else if (other.key() < this->key()) {
-                    cache_record.result = *this - other.else_();
+                    rv = *this - other.else_();
                 }
 
-                return cache_record.result;
+                cache_record.left = *this;
+                cache_record.right = other;
+                cache_record.result = rv;
+                return rv;
             }
 
             Root operator^ (const Root& other) const {
@@ -280,48 +289,51 @@ namespace ydd {
                 }
 
                 // Try to get the result from the cache.
-                auto& cache_record = this->_engine->_symmetric_difference_cache(*this, other);
+                auto& cache_record = this->_engine->_union_cache(*this, other);
                 if ((cache_record.left == *this) and (cache_record.right == other)) {
                     return cache_record.result;
-                } else {
-                    cache_record.left = *this;
-                    cache_record.right = other;
                 }
+
+                // Compute the result.
+                Root rv;
 
                 if (this->is_one()) {
                     if (other.is_one()) {
-                        cache_record.result = this->_engine->make_terminal(false);
+                        rv = this->_engine->make_terminal(false);
                     } else {
-                        cache_record.result = this->_engine->make_node(
+                        rv = this->_engine->make_node(
                             other.key(), other.then_(), *this ^ other.else_());
                     }
                 }
 
                 else if (other.is_one()) {
                     if (this->is_one()) {
-                        cache_record.result = this->_engine->make_terminal(false);
+                        rv = this->_engine->make_terminal(false);
                     } else {
-                        cache_record.result = this->_engine->make_node(
+                        rv = this->_engine->make_node(
                             this->key(), this->then_(), this->else_() ^ other);
                     }
                 }
 
                 else if (other.key() > this->key()) {
-                    cache_record.result = this->_engine->make_node(
+                    rv = this->_engine->make_node(
                         this->key(), this->then_(), this->else_() ^ other);
                 }
 
                 else if (other.key() == this->key()) {
-                    cache_record.result = this->_engine->make_node(
+                    rv = this->_engine->make_node(
                         this->key(), this->then_() ^ other.then_(), this->else_() ^ other.else_());
                 }
 
                 else if (other.key() < this->key()) {
-                    cache_record.result = this->_engine->make_node(
+                    rv = this->_engine->make_node(
                         other.key(), other.then_(), *this ^ other.else_());
                 }
 
-                return cache_record.result;
+                cache_record.left = *this;
+                cache_record.right = other;
+                cache_record.result = rv;
+                return rv;
             }
 
             inline const Key& key() const {
@@ -413,9 +425,6 @@ namespace ydd {
         public:
             struct CacheRecord {
                 CacheRecord() {}
-                CacheRecord(const Root* left, const Root* right, const Root* result)
-                : left(left), right(right), result(result) {
-                }
 
                 Root left;
                 Root right;
