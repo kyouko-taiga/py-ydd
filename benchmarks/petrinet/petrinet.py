@@ -1,21 +1,15 @@
 # Copyright (c) 2015, Dimitri Racordon.
 # Licensed under the Apache License, Version 2.0.
 
-import argparse
-import time
-import sys
 import xml.etree.ElementTree as ET
 
 from functools import wraps
 
-from ydd.engines.default import DefaultEngine as Engine
-
 
 class Place(object):
 
-    def __init__(self, id_, label=None, tokens=0):
+    def __init__(self, id_, tokens=0):
         self.id_ = id_
-        self.label = label or id_
         self.tokens = tokens
 
     def __lt__(self, other):
@@ -31,31 +25,39 @@ class Place(object):
         return hash((self.id_, self.tokens))
 
     def __str__(self):
-        return '%s:%i' % (self.label, self.tokens)
+        return '%s:%i' % (self.id_, self.tokens)
 
     def __repr__(self):
-        return 'Place<%s:%i>' % (self.label, self.tokens)
+        return 'Place<%s:%i>' % (self.id_, self.tokens)
 
 
 class PetriNet(object):
 
-    def __init__(self, engine, pre, post, m0):
+    def __init__(self, engine, pre, post, m0, place_names=None, place_class=Place):
         self.engine = engine
         self.pre = pre
         self.post = post
         self.m0 = m0
 
-        self._cache = {}
+        self.place_names = place_names
+        self.place_class = place_class
+
+        self._cache = {
+            'filter_markings': {},
+            'fire': {}
+        }
 
     def cached(fn):
         @wraps(fn)
         def decorated(self, *args, **kwargs):
-            cache_key = hash(tuple([fn.__name__, kwargs.values()] + list(args)))
+            cache = self._cache[fn.__name__]
+            _args = tuple([fn.__name__] + list(args))
             try:
-                return self._cache[cache_key]
+                return cache[_args]
             except KeyError:
-                self._cache[cache_key] = fn(self, *args, **kwargs)
-            return self._cache[cache_key]
+                rv = fn(self, *args, **kwargs)
+            cache[_args] = rv
+            return rv
         return decorated
 
     @cached
@@ -65,10 +67,9 @@ class PetriNet(object):
 
         if self.pre[trans][place_id] <= markings.key.tokens:
             return self.engine.make_node(
-                key=markings.key,
-                then_=self.filter_markings(markings.then_, trans, place_id + 1),
-                else_=self.filter_markings(markings.else_, trans, place_id)
-            )
+                markings.key,
+                self.filter_markings(markings.then_, trans, place_id + 1),
+                self.filter_markings(markings.else_, trans, place_id))
         else:
             return self.filter_markings(markings.else_, trans, place_id)
 
@@ -80,13 +81,12 @@ class PetriNet(object):
         if markings.key.id_ == place_id:
             delta = self.post[trans][place_id] - self.pre[trans][place_id]
             return self.engine.make_node(
-                key=Place(
+                self.place_class(
                     id_=place_id,
                     tokens=markings.key.tokens + delta
                 ),
-                then_=self.fire(markings.then_, trans, place_id + 1),
-                else_=self.fire(markings.else_, trans, place_id)
-            )
+                self.fire(markings.then_, trans, place_id + 1),
+                self.fire(markings.else_, trans, place_id))
 
         raise ValueError('Invalid family of markings.')
 
@@ -99,13 +99,13 @@ class PetriNet(object):
     def state_space(self):
         x = self.m0
         y = x | self.step(x)
-        while x is not y:
+        while x != y:
             x = y
             y = x | self.step(x)
         return y
 
     @classmethod
-    def from_pnml(cls, engine, filename):
+    def from_pnml(cls, engine, filename, place_class=Place):
         # Parse the PNML file, stripping all namespaces.
         tree = ET.iterparse(filename)
         for _, el in tree:
@@ -116,17 +116,15 @@ class PetriNet(object):
         for net_node in root:
             # Get the list of places, with their initial marking.
             places = {}
+            place_names = {}
             for place_num, place_node in enumerate(net_node.iter('place')):
                 try:
                     tokens = int(place_node.find('./initialMarking/text').text)
                 except AttributeError:
                     tokens = 0
 
-                places[place_node.get('id')] = Place(
-                    place_num,
-                    label=place_node.find('./name/text').text,
-                    tokens=tokens
-                )
+                places[place_node.get('id')] = place_class(place_num, tokens=tokens)
+                place_names[place_node.get('id')] = place_node.find('./name/text').text
 
             m0 = engine.make(places.values())
 
@@ -153,31 +151,7 @@ class PetriNet(object):
                 else:
                     post[transitions[source]][places[target].id_] = tokens
 
-            nets[net_node.get('id')] = cls(engine, pre, post, m0)
+            nets[net_node.get('id')] = cls(
+                engine, pre, post, m0, place_names=place_names, place_class=place_class)
 
         return nets
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('pnml', metavar='pnml', help='The filename of the PNML file to parse.')
-    parser.add_argument(
-        '-r', '--recursion-limit', dest='recursion', metavar='N', type=int,
-        help="Override Python's default recursion limit.")
-    args = parser.parse_args()
-
-    # Set the recursion limit.
-    if args.recursion:
-        sys.setrecursionlimit(args.recursion)
-
-    engine = Engine()
-    pns = PetriNet.from_pnml(engine, args.pnml)
-
-    print('%i Petri Net(s) found in the pnml file.' % len(pns))
-
-    for id_, pn in pns.items():
-        print('Generate the state space for "%s".' % id_)
-        start = time.time()
-        state_space = pn.state_space()
-        elapsed = time.time() - start
-        print('\t%i state(s), computed in %f[s]' % (len(state_space), elapsed))
