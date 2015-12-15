@@ -11,11 +11,9 @@
 
 namespace ydd {
 
-    template <typename Config>
+    template <typename Key>
     class Engine {
     private:
-        using Key = typename Config::Key;
-
         class Node;
 
     public:
