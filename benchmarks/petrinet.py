@@ -1,3 +1,6 @@
+# Copyright (c) 2015, Dimitri Racordon.
+# Licensed under the Apache License, Version 2.0.
+
 import argparse
 import time
 import sys
@@ -5,7 +8,7 @@ import xml.etree.ElementTree as ET
 
 from functools import wraps
 
-from ydd.ydd import Engine
+from ydd.engines.default import DefaultEngine as Engine
 
 
 class Place(object):
@@ -57,11 +60,11 @@ class PetriNet(object):
 
     @cached
     def filter_markings(self, markings, trans, place_id=0):
-        if (markings is self.engine.zero) or (place_id >= len(self.pre[trans])):
+        if (markings.is_zero()) or (place_id >= len(self.pre[trans])):
             return markings
 
         if self.pre[trans][place_id] <= markings.key.tokens:
-            return self.engine._make_node(
+            return self.engine.make_node(
                 key=markings.key,
                 then_=self.filter_markings(markings.then_, trans, place_id + 1),
                 else_=self.filter_markings(markings.else_, trans, place_id)
@@ -71,12 +74,12 @@ class PetriNet(object):
 
     @cached
     def fire(self, markings, trans, place_id=0):
-        if (markings is self.engine.zero) or (place_id >= len(self.pre[trans])):
+        if (markings.is_zero()) or (place_id >= len(self.pre[trans])):
             return markings
 
         if markings.key.id_ == place_id:
             delta = self.post[trans][place_id] - self.pre[trans][place_id]
-            return self.engine._make_node(
+            return self.engine.make_node(
                 key=Place(
                     id_=place_id,
                     tokens=markings.key.tokens + delta
@@ -88,7 +91,7 @@ class PetriNet(object):
         raise ValueError('Invalid family of markings.')
 
     def step(self, markings):
-        rv = self.engine.zero
+        rv = self.engine.make_terminal(False)
         for trans in self.pre:
             rv = rv | self.fire(self.filter_markings(markings, trans), trans)
         return rv
