@@ -126,7 +126,7 @@ namespace ydd {
             }
 
             Root operator| (const Root& other) const {
-                if (this->is_zero()) {
+                if (this->is_zero() or (*this == other)) {
                     return other;
                 } else if (other.is_zero()) {
                     return *this;
@@ -142,21 +142,13 @@ namespace ydd {
                 Root rv;
 
                 if (this->is_one()) {
-                    if (other.is_one() or other.is_zero()) {
-                        rv = *this;
-                    } else {
-                        rv = this->_engine->make_node(
-                            other.key(), other.then_(), other.else_() | *this);
-                    }
+                    rv = this->_engine->make_node(
+                        other.key(), other.then_(), other.else_() | *this);
                 }
 
                 else if (other.is_one()) {
-                    if (this->is_one() or this->is_zero()) {
-                        rv = other;
-                    } else {
-                        rv = this->_engine->make_node(
-                            this->key(), this->then_(), this->else_() | other);
-                    }
+                    rv = this->_engine->make_node(
+                        this->key(), this->then_(), this->else_() | other);
                 }
 
                 else if (other.key() > this->key()) {
@@ -181,7 +173,7 @@ namespace ydd {
             }
 
             Root operator& (const Root& other) const {
-                if (this->is_zero()) {
+                if (this->is_zero() or (*this == other)) {
                     return *this;
                 } else if (other.is_zero()) {
                     return other;
@@ -234,6 +226,8 @@ namespace ydd {
             Root operator- (const Root& other) const {
                 if (this->is_zero() or other.is_zero()) {
                     return *this;
+                } else if (*this == other) {
+                    return this->_engine->make_terminal(false);
                 }
 
                 // Try to get the result from the cache.
@@ -288,6 +282,8 @@ namespace ydd {
                     return other;
                 } else if (other.is_zero()) {
                     return *this;
+                } else if (*this == other) {
+                    return this->_engine->make_terminal(false);
                 }
 
                 // Try to get the result from the cache.
