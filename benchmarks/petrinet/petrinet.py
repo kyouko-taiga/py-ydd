@@ -51,12 +51,11 @@ class PetriNet(object):
         @wraps(fn)
         def decorated(self, *args, **kwargs):
             cache = self._cache[fn.__name__]
-            _args = tuple([fn.__name__] + list(args))
             try:
-                return cache[_args]
+                return cache[args]
             except KeyError:
                 rv = fn(self, *args, **kwargs)
-            cache[_args] = rv
+            cache[args] = rv
             return rv
         return decorated
 
