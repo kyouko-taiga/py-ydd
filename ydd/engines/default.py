@@ -144,21 +144,29 @@ class DefaultEngine(AbstractEngine):
         if use_weak_table:
             self._table = WeakValueDictionary(self._table)
 
-        self._cache = {}
+        self._cache = {
+            'len': {},
+            'union': {},
+            'intersection': {},
+            'difference': {},
+            'symmetric_difference': {}
+        }
 
     def cached(keygen=None):
         def decorate(fn):
             @wraps(fn)
             def decorated(self, *args):
+                cache = self._cache[fn.__name__]
                 if keygen is None:
-                    cache_key = tuple([fn.__name__] + [id(arg) for arg in args])
+                    cache_key = tuple([id(arg) for arg in args])
                 else:
-                    cache_key = tuple([fn.__name__] + keygen(*args))
+                    cache_key = tuple(keygen(*args))
                 try:
-                    return self._cache[cache_key]
+                    return cache[cache_key]
                 except KeyError:
-                    self._cache[cache_key] = fn(self, *args)
-                return self._cache[cache_key]
+                    rv = fn(self, *args)
+                cache[cache_key] = fn(self, *args)
+                return rv
             return decorated
         return decorate
 
