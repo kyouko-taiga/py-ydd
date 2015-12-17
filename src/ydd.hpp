@@ -188,7 +188,7 @@ namespace ydd {
                 }
 
                 // Try to get the result from the cache.
-                auto& cache_record = this->_engine->_union_cache(*this, other);
+                auto& cache_record = this->_engine->_intersection_cache(*this, other);
                 if ((cache_record.left == *this) and (cache_record.right == other)) {
                     return cache_record.result;
                 }
@@ -237,7 +237,7 @@ namespace ydd {
                 }
 
                 // Try to get the result from the cache.
-                auto& cache_record = this->_engine->_union_cache(*this, other);
+                auto& cache_record = this->_engine->_difference_cache(*this, other);
                 if ((cache_record.left == *this) and (cache_record.right == other)) {
                     return cache_record.result;
                 }
@@ -291,7 +291,7 @@ namespace ydd {
                 }
 
                 // Try to get the result from the cache.
-                auto& cache_record = this->_engine->_union_cache(*this, other);
+                auto& cache_record = this->_engine->_symmetric_difference_cache(*this, other);
                 if ((cache_record.left == *this) and (cache_record.right == other)) {
                     return cache_record.result;
                 }
