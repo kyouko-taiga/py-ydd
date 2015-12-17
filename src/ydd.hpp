@@ -4,9 +4,11 @@
 #ifndef __cppydd_ydd__
 #define __cppydd_ydd__
 
-#include <cstddef>
 #include <functional>
 #include <stdexcept>
+#include <unordered_set>
+
+#include <boost/functional/hash.hpp>
 
 
 namespace ydd {
@@ -42,7 +44,7 @@ namespace ydd {
                 if (this->node != nullptr) {
                     this->node->ref_count--;
                     if (this->node->ref_count == 0) {
-                        this->node->~Node();
+                        this->_engine->_unique_table.destroy_node(this->node);
                         this->node = nullptr;
                     }
                 }
@@ -52,7 +54,7 @@ namespace ydd {
                 if (this->node != nullptr) {
                     this->node->ref_count--;
                     if (this->node->ref_count == 0) {
-                        this->node->~Node();
+                        this->_engine->_unique_table.destroy_node(this->node);
                         this->node = nullptr;
                     }
                 }
@@ -374,16 +376,12 @@ namespace ydd {
         };
 
         Engine(
-            std::size_t bucket_count=65536,
-            std::size_t bucket_size=4,
             std::size_t union_cache_size=512,
             std::size_t intersection_cache_size=512,
             std::size_t difference_cache_size=512,
             std::size_t symmetric_difference_cache_size=512
         ) :
-            bucket_count(bucket_count),
-            bucket_size(bucket_size),
-            _unique_table(bucket_count, bucket_size),
+            _unique_table(),
             _union_cache(union_cache_size),
             _intersection_cache(intersection_cache_size),
             _difference_cache(difference_cache_size),
@@ -409,45 +407,19 @@ namespace ydd {
 
         Root make_terminal(bool terminal) {
             if (terminal) {
-                return this->_unique_table[Node(terminal)];
+                return this->_unique_table[Node(true)];
             } else {
                 return Root();
             }
         }
 
-        const std::size_t bucket_count;
-        const std::size_t bucket_size;
-
     private:
         friend class Root;
 
-        class Cache {
-        public:
-            struct CacheRecord {
-                CacheRecord() {}
-
-                Root left;
-                Root right;
-                Root result;
-            };
-
-            Cache(const std::size_t size)
-            : _store(new CacheRecord[size]), _store_size(size) {
+        struct NodeHasher {
+            std::size_t operator() (const Node& node) const {
+                return node.hash();
             }
-
-            ~Cache() {
-                delete[] this->_store;
-            }
-
-            CacheRecord& operator() (const Root& left, const Root& right) {
-                std::size_t h = left.hash();
-                h ^= right.hash() + 0x9e3779b9 + (h << 6) + (h >> 2);
-                return this->_store[h % this->_store_size];
-            }
-
-        private:
-            CacheRecord* _store;
-            const std::size_t _store_size;
         };
 
         class Node {
@@ -471,20 +443,18 @@ namespace ydd {
                     and (this->key == other.key)
                     and (this->then_ == other.then_)
                     and (this->else_ == other.else_);
-                    // and (this->then_key == other.then_key)
-                    // and (this->else_key == other.else_key);
             }
 
             std::size_t hash() const {
                 std::hash<bool> bool_hasher;
-                // fixme (std::hash<Root>)
                 std::hash<Key> key_hasher;
-                
+
                 std::size_t rv = 0;
-                rv ^= bool_hasher(this->terminal) + 0x9e3779b9 + (rv << 6) + (rv >> 2);
-                rv ^= this->then_.hash() + 0x9e3779b9 + (rv << 6) + (rv >> 2);
-                rv ^= this->else_.hash() + 0x9e3779b9 + (rv << 6) + (rv >> 2);
-                rv ^= key_hasher(this->key) + 0x9e3779b9 + (rv << 6) + (rv >> 2);
+                boost::hash_combine(rv, bool_hasher(this->terminal));
+                boost::hash_combine(rv, key_hasher(this->key));
+                boost::hash_combine(rv, this->then_.hash());
+                boost::hash_combine(rv, this->else_.hash());
+
                 return rv;
             }
 
@@ -501,44 +471,55 @@ namespace ydd {
 
         class UniqueTable {
         public:
-            UniqueTable(std::size_t bucket_count, std::size_t bucket_size) :
-                bucket_count(bucket_count),
-                bucket_size(bucket_size),
-                nodes(new Node[bucket_count * bucket_size]) {
-            }
-
-            ~UniqueTable() {
-                delete[] this->nodes;
+            void destroy_node(const Node* node) {
+                this->_nodes.erase(*node);
             }
 
             Root operator[] (const Node& node) {
-                // Check whether the node already exists in the table.
-                std::size_t idx = (node.hash() % this->bucket_count) * this->bucket_size;
-                for (auto i = idx; i < idx + this->bucket_size; ++i) {
-                    if ((this->nodes[i].ref_count > 0) and (node == this->nodes[i])) {
-                        // To change when we'll be using attributed edges.
-                        return Root(*this->_engine, &this->nodes[i]);
-                    }
+                // Look for a node that matches the input in the table.
+                auto it = this->_nodes.find(node);
+                if (it != this->_nodes.end()) {
+                    return Root(*this->_engine, &(*it));
                 }
 
                 // Insert the new node in the table.
-                for (auto i = idx; i < idx + this->bucket_size; ++i) {
-                    if (this->nodes[i].ref_count == 0) {
-                        this->nodes[i] = std::move(node);
-                        
-                        // To change when we'll be using attributed edges.
-                        return Root(*this->_engine, &this->nodes[i]);
-                    }
-                }
-
-                throw std::overflow_error("The table is full.");
+                auto res = this->_nodes.insert(node);
+                return Root(*this->_engine, &(*res.first));
             }
 
-            const std::size_t bucket_count;
-            const std::size_t bucket_size;
-
             Engine* _engine;
-            Node* nodes;
+
+        private:
+            std::unordered_set<Node, NodeHasher> _nodes;
+        };
+
+        class Cache {
+        public:
+            struct CacheRecord {
+                CacheRecord() {}
+
+                Root left;
+                Root right;
+                Root result;
+            };
+
+            Cache(const std::size_t size)
+            : _store(new CacheRecord[size]), _store_size(size) {
+            }
+
+            ~Cache() {
+                delete[] this->_store;
+            }
+
+            CacheRecord& operator() (const Root& left, const Root& right) {
+                std::size_t h = left.hash();
+                boost::hash_combine(h, right.hash());
+                return this->_store[h % this->_store_size];
+            }
+
+        private:
+            CacheRecord* _store;
+            const std::size_t _store_size;
         };
 
         UniqueTable _unique_table;

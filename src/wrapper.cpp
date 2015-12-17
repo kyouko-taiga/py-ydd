@@ -45,16 +45,11 @@ BOOST_PYTHON_MODULE(_cpp) {
         .def("__hash__", &IntRoot::hash);
 
     class_<IntEngine, boost::noncopyable>(
-        "IntEngine", init<optional<szt, szt, szt, szt, szt, szt>>((
-            arg("bucket_count"),
-            arg("bucket_size"),
+        "IntEngine", init<optional<szt, szt, szt, szt>>((
             arg("union_cache_size"),
             arg("intersection_cache_size"),
             arg("difference_cache_size"),
             arg("symmetric_difference_cache_size"))))
-
-        .def_readonly("bucket_count", &IntEngine::bucket_count)
-        .def_readonly("bucket_size", &IntEngine::bucket_size)
 
         .def("make_terminal", &IntEngine::make_terminal)
         .def("make_node", &IntEngine::make_node);
@@ -95,16 +90,11 @@ BOOST_PYTHON_MODULE(_cpp) {
         .def("__hash__", &PNRoot::hash);
 
     class_<PNEngine, boost::noncopyable>(
-        "PNEngine", init<optional<szt, szt, szt, szt, szt, szt>>((
-            arg("bucket_count"),
-            arg("bucket_size"),
+        "PNEngine", init<optional<szt, szt, szt, szt>>((
             arg("union_cache_size"),
             arg("intersection_cache_size"),
             arg("difference_cache_size"),
             arg("symmetric_difference_cache_size"))))
-
-        .def_readonly("bucket_count", &PNEngine::bucket_count)
-        .def_readonly("bucket_size", &PNEngine::bucket_size)
 
         .def("make_terminal", &PNEngine::make_terminal)
         .def("make_node", &PNEngine::make_node);
